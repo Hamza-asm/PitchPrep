@@ -39,6 +39,7 @@ def strict_schema(schema: dict[str, Any]) -> dict[str, Any]:
         "exclusiveMinimum", "exclusiveMaximum", "multipleOf", "minProperties",
         "maxProperties", "uniqueItems", "examples", "deprecated", "readOnly", "writeOnly",
     }
+    map_keys = {"properties", "$defs", "definitions"}
 
     def walk(item: Any) -> None:
         if isinstance(item, dict):
@@ -47,8 +48,12 @@ def strict_schema(schema: dict[str, Any]) -> dict[str, Any]:
             if item.get("type") == "object" or "properties" in item:
                 item["additionalProperties"] = False
                 item["required"] = list(item.get("properties", {}))
-            for value in item.values():
-                walk(value)
+            for key, value in item.items():
+                if key in map_keys and isinstance(value, dict):
+                    for child in value.values():
+                        walk(child)
+                else:
+                    walk(value)
         elif isinstance(item, list):
             for value in item:
                 walk(value)

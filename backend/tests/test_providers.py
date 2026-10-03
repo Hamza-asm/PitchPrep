@@ -6,9 +6,26 @@ import pytest
 from groq import AsyncGroq
 
 from app.core.errors import InvalidModelOutput, ServiceError
-from app.schemas.research import LinkAssessment
+from app.schemas.research import AnalysisOutput, DraftOutput, LinkAssessment, MatchesOutput, ParsedCompany, Verification
 from app.services.firecrawl import FirecrawlService
-from app.services.groq import GroqService
+from app.services.groq import GroqService, strict_schema
+
+
+def test_strict_schema_keeps_required_property_names():
+    output_models = (ParsedCompany, AnalysisOutput, MatchesOutput, DraftOutput, Verification, LinkAssessment)
+    for model in output_models:
+        schema = strict_schema(model.model_json_schema())
+        stack = [schema]
+        while stack:
+            item = stack.pop()
+            if isinstance(item, dict):
+                properties = item.get("properties")
+                required = item.get("required")
+                if isinstance(properties, dict) and isinstance(required, list):
+                    assert set(required) <= set(properties), model.__name__
+                stack.extend(value for value in item.values() if isinstance(value, (dict, list)))
+            elif isinstance(item, list):
+                stack.extend(item)
 
 
 async def test_firecrawl_fixed_scrape_and_news_only(settings):
