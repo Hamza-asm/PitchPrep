@@ -12,12 +12,12 @@ This tracker follows [docs/PRD.md](docs/PRD.md). **Implemented** means the code 
 | --- | --- | --- |
 | 1. Schemas, configuration, backend skeleton | Implemented; local integration verified | None for this phase |
 | 2. Workflow nodes and provider integrations | Implemented; offline verified | Deliberate live Groq/Firecrawl smoke test and output-quality review |
-| 3. Supabase persistence | Applied to the development project; database behavior previously verified through MCP | Verify the application transport against that database during integration |
+| 3. Supabase persistence | Applied to the development project; local and deployed API transport verified | Verify a complete live research run and durable result persistence |
 | 4. API routes and streaming | Implemented; offline coverage | Exercise the browser-to-backend-to-database flow with a real run |
 | 5. Landing page | Implemented; frontend checks passed | Final user review and any requested polish |
 | 6. Workflow screens and brief view | Implemented; mocked browser checks passed | Live integration, physical-device and accessibility review |
 | 7. Evaluation dataset, runner, LangSmith wiring | Tracing/feedback wiring implemented; evaluation suite not implemented | Dataset, labeled verifier cases, metrics, runner, results, and live trace confirmation |
-| 8. Deployment configuration and README | Repository documentation prepared; deployment pending | Hosting decision, deployment configuration, access controls, and deployed verification |
+| 8. Deployment configuration and README | Render configuration deployed; basic frontend/backend routes verified | Complete live research verification, hosted access review, and operational sign-off |
 
 ## Completed work
 
@@ -49,6 +49,11 @@ These items describe setup already completed. They do not certify that every cur
 - [x] Writer revision loop capped at two attempts; remaining unsupported units removed and limitations recorded.
 - [x] Email-only regeneration reuses saved evidence and preserves verified brief claims.
 - [x] LangSmith tracing wrapper with hidden inputs/outputs.
+- [x] Failed-stage retry resumes from saved checkpoints and reuses completed sources/stages.
+- [x] Groq strict-schema sanitization preserves field names, inlines `$ref` definitions, and keeps Pydantic validation local.
+- [x] Groq diagnostics classify request rejection, authentication, model-not-found, rate-limit, truncation, and local validation failures without logging prompts or responses.
+- [x] GPT-OSS calls use low reasoning effort, per-node output budgets, and safe token-usage metadata logging.
+- [x] Persisted analysis checkpoints remain readable when older runs contain larger finding lists.
 
 Implementation: [backend/app](backend/app). Operational details: [backend/README.md](backend/README.md).
 
@@ -89,6 +94,7 @@ Details and applied migration names: [docs/DATABASE.md](docs/DATABASE.md). Remot
 - [x] Responsive layouts, keyboard focus, reduced motion, and mobile navigation.
 - [x] Input retained after submission failures; unchanged retries reuse the idempotency key.
 - [x] Public API-origin validation with a clear setup error for malformed configuration.
+- [x] Workflow-start warning explains shared demo data, free-tier Groq limits, blocked links, and limited evidence.
 
 Contracts: [docs/API.md](docs/API.md). Frontend guide: [frontend/README.md](frontend/README.md).
 
@@ -103,7 +109,7 @@ Contracts: [docs/API.md](docs/API.md). Frontend guide: [frontend/README.md](fron
 - [x] Automated accessibility checks found no violations in the tested landing, input, and brief states.
 - [x] Tested 360px layouts, increased input-screen text size, and reduced-motion behavior.
 - [x] Inspected desktop/mobile screenshots during frontend implementation.
-- [x] Phase 2 offline provider/workflow verification: configured model IDs and Firecrawl endpoint were read without secrets; all 46 backend tests passed on 2026-10-03.
+- [x] Phase 2 focused provider/workflow verification: configured model IDs and Firecrawl endpoint were read without secrets; schema, workflow, repository, and frontend checks passed for the changed slices.
 
 Verification record: [docs/FRONTEND_REVIEW.md](docs/FRONTEND_REVIEW.md).
 
@@ -138,13 +144,13 @@ Batch/CSV processing, automatic email sending, CRM integrations, user accounts, 
 | Evaluation dataset and runner | `backend/evals/` has no completed dataset, labeled verifier cases, scoring metrics, report writer, or offline evaluation tests yet. | Build the offline schemas, fixtures, metrics, runner, and documentation. |
 | Full live application verification | Persistence, progress streaming, history reopening, thin-data behavior, regeneration, feedback delivery, and LangSmith spans require an approved live research run. | Use the approved smoke run to verify the complete browser-to-provider flow. |
 | Final user-facing review | Automated browser checks cover representative states, but Hamza's product review, screen-reader pass, physical-device check, second-browser check, and Lighthouse review are still outstanding. | Review the running app and address concrete findings within PRD scope. |
-| Deployment | Frontend is reachable, but the supplied backend URL returns HTTP 404 for `/api/health`, `/docs`, and `/openapi.json`; the deployed service is not serving this FastAPI app. | Set the backend service root to `backend` and start command to `uvicorn app.main:create_app --factory --host 0.0.0.0 --port $PORT`, redeploy, then recheck. |
+| Deployment | Render frontend and backend are reachable, and basic backend routes return HTTP 200; the complete hosted research flow is not yet verified. | Run an approved live smoke test, then verify SSE, persistence, feedback, and worker behavior. |
 
 Phase 1 verification on 2026-10-03: `GET /api/health`, `/api/seller-profile`, and `/api/briefs?limit=1&offset=0` returned HTTP 200; the frontend origin returned HTTP 200. No secrets or saved record contents were printed.
 
 Phase 2 result on 2026-10-03: provider/workflow code was verified offline; configured model IDs and the Firecrawl endpoint were read without secrets; `46 passed` backend tests. No live provider request was made because the required request budget was not specified.
 
-Deployment verification on 2026-10-03: `https://pitchprep-1.onrender.com` returned HTTP 200, but `https://pitchprep-backend.onrender.com` returned HTTP 404 for all expected FastAPI paths. Deployment is not complete until the backend service is corrected and redeployed.
+Deployment verification on 2026-10-03: `https://pitchprep-1.onrender.com` returned HTTP 200; the corrected backend `https://pitchprep.onrender.com` returned HTTP 200 for `/api/health`, `/api/seller-profile`, and `/api/briefs?limit=1&offset=0`. A full hosted research run has not yet been verified.
 
 The completion checklist above remains intentionally unchecked for requirements that depend on live verification or deployment; those requirements are represented here with their blocking reason rather than being marked complete from mocked results.
 
@@ -160,5 +166,5 @@ Update this file after each phase with the implementation changes, checks actual
 - [x] Reduced model context and output budgets: parser input 4,000 characters, collector excerpts 1,200 characters, four verified quotes of at most 700 characters, fewer news snippets, and per-node output-token caps. Groq 429 responses are not automatically retried.
 - [x] Supabase development RPC and job-kind constraint updated to permit checkpoint retries; database schema/function definition verified via MCP.
 - [x] Frontend `npm run lint` and `npm run build` pass for the countdown and retry UI update.
-- [ ] Backend software checks and live provider behavior remain unverified in this update. No Groq or Firecrawl calls were made.
+- [x] Focused backend software checks for retry/schema/token changes passed; no Groq or Firecrawl calls were made by the test suite.
 - [x] Older saved workflow states retain their original list-size compatibility limits; separate constrained schemas keep new model output budgets in place.

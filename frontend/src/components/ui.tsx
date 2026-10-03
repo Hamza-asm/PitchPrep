@@ -42,7 +42,7 @@ export function Notice({ children, kind = "error" }: { children: ReactNode; kind
 }
 
 export function SharedDemoNotice() {
-  return <aside className="demo-notice wrap" aria-label="Shared demo workspace notice"><Icon name="alert" /><div><strong>PitchPrep demo workspace</strong><p>Sign-up and login are not available yet. This deployment is shared, so the seller profile, research briefs, pasted details, and email edits can be seen by everyone using it. Please do not enter confidential information.</p></div></aside>;
+  return <aside className="demo-notice wrap" aria-label="Demo workspace limitations"><Icon name="alert" /><ul><li><strong>PitchPrep demo workspace:</strong> Sign-up and login are not available yet. This deployment is shared, so the seller profile, research briefs, pasted details, and email edits can be seen by everyone using it. Please do not enter confidential information.</li><li><strong>Free-tier demo limits:</strong> This demo uses free-tier Groq models, so rate limits or response limits can interrupt longer runs. Some websites and social links may also block collection or provide limited evidence. Completed stages are saved and can be retried without starting over.</li></ul></aside>;
 }
 
 export function Skeleton({ label = "Loading your workspace" }: { label?: string }) {
