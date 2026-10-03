@@ -67,7 +67,7 @@ function RetryStageButton({ detail, retrying, onRetry }: { detail: BriefDetail; 
   const unlockAt = Date.parse(detail.updated_at) + RETRY_COOLDOWN_MS;
   const secondsLeft = Number.isFinite(unlockAt) ? Math.max(0, Math.ceil((unlockAt - clock) / 1000)) : 0;
   const countdown = `${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, "0")}`;
-  return <div className="grid gap-2">
+  return <div className="retry-stage-action">
     <button className="button button-primary" onClick={onRetry} disabled={retrying || secondsLeft > 0}>
       {retrying ? "Starting retry…" : secondsLeft > 0 ? `Retry available in ${countdown}` : "Retry failed step"}
       <span className="sr-only">: {retryLabels[detail.retry_node]}</span>

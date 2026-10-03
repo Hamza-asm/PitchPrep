@@ -92,6 +92,9 @@ The model still performs semantic verification; matching an evidence quote is
 an additional structural check, not proof of the model's judgment. Live output
 quality and provider compatibility need a separately authorized smoke test.
 
+Groq HTTP failures log only the workflow node, HTTP status, and provider request
+ID; prompts, response bodies, credentials, and pasted data are not logged.
+
 Runs and progress are saved outside the browser request. The database permits
 one active run across workers. A lost lease cancels work; interrupted runs become
 failed and are not automatically retried. Link confirmation resumes at Analyst.

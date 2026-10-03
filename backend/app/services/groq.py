@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import logging
 from copy import deepcopy
 from typing import Any
 
@@ -12,6 +13,8 @@ from app.core.config import Settings
 from app.core.errors import InvalidModelOutput, ServiceError
 from app.services.ports import Output
 from app.services.retry import retry_after_seconds, with_backoff
+
+logger = logging.getLogger(__name__)
 
 NODE_OUTPUT_TOKEN_LIMITS = {
     "parser": 800,
@@ -26,12 +29,19 @@ NODE_OUTPUT_TOKEN_LIMITS = {
 
 
 def strict_schema(schema: dict[str, Any]) -> dict[str, Any]:
-    """Keep nullable fields but require every key, including nested model keys."""
+    """Build Groq's strict-schema subset; Pydantic enforces omitted constraints locally."""
     result = deepcopy(schema)
+    # Groq's constrained decoder accepts a JSON Schema subset. Keep validation
+    # bounds in the Pydantic models, but omit these keywords from its grammar.
+    local_only_keywords = {
+        "default", "title", "pattern", "minLength", "maxLength",
+        "minItems", "maxItems",
+    }
 
     def walk(item: Any) -> None:
         if isinstance(item, dict):
-            item.pop("default", None)
+            for keyword in local_only_keywords:
+                item.pop(keyword, None)
             if item.get("type") == "object" or "properties" in item:
                 item["additionalProperties"] = False
                 item["required"] = list(item.get("properties", {}))
@@ -103,20 +113,63 @@ class GroqService:
                         return completion.choices[0].message.content or ""
                     except APIStatusError as error:
                         status = error.status_code
-                        raise ServiceError(
-                            "rate_limited" if status == 429 else "model_unavailable",
-                            (
+                        request_id = (
+                            error.response.headers.get("x-request-id")
+                            or error.response.headers.get("x-groq-id")
+                        )
+                        # Log allowlisted metadata only. Provider messages can
+                        # echo request content, so never log the response body.
+                        try:
+                            error_payload = error.response.json()
+                            provider_error = error_payload.get("error", {})
+                            provider_code = provider_error.get("code")
+                            provider_type = provider_error.get("type")
+                            provider_param = provider_error.get("param")
+                        except (ValueError, AttributeError):
+                            provider_code = provider_type = provider_param = None
+                        logger.warning(
+                            "Groq request failed node=%s status=%s request_id=%s code=%s type=%s param=%s",
+                            node,
+                            status,
+                            request_id or "unavailable",
+                            provider_code or "unavailable",
+                            provider_type or "unavailable",
+                            provider_param or "unavailable",
+                        )
+                        if status == 400:
+                            code = "model_request_rejected"
+                            message = "Groq rejected this model request. Check the model ID and structured-output support."
+                        elif status in (401, 403):
+                            code = "model_auth_failed"
+                            message = "Groq rejected the configured credentials. Check the Groq API key in deployment settings."
+                        elif status == 404:
+                            code = "model_not_found"
+                            message = "The configured Groq model was not found. Check the model ID in deployment settings."
+                        elif status == 429:
+                            code = "rate_limited"
+                            message = (
                                 "Groq rate limit reached. Your input and completed stages are saved; "
                                 "wait for the limit to reset, then retry this stage."
-                                if status == 429 else
-                                "The model service is busy or unavailable. Your input has been kept; try again later."
-                            ),
+                            )
+                        elif status >= 500:
+                            code = "model_upstream_error"
+                            message = (
+                                f"Groq returned a temporary server error (HTTP {status}). "
+                                "Your input and completed stages are saved; wait a moment, then retry this stage."
+                            )
+                        else:
+                            code = "model_unavailable"
+                            message = "The model service is busy or unavailable. Your input has been kept; try again later."
+                        raise ServiceError(
+                            code,
+                            message,
                             # A 429 often means the token window is still full. Do not spend more
                             # requests retrying it automatically; let the user resume this node.
                             retryable=status in (408, 409) or status >= 500,
                             retry_after=retry_after_seconds(error.response.headers.get("retry-after")),
                         ) from None
                     except APIConnectionError:
+                        logger.warning("Groq connection failed node=%s", node)
                         raise ServiceError(
                             "model_unavailable",
                             "The model service could not be reached. Your input has been kept; try again later.",
