@@ -21,3 +21,5 @@ out/
 .DS_Store
 Thumbs.db
 '@ | Set-Content -Encoding utf8 .gitignore
+.agents
+skills-lock.json
