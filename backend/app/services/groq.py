@@ -35,7 +35,9 @@ def strict_schema(schema: dict[str, Any]) -> dict[str, Any]:
     # bounds in the Pydantic models, but omit these keywords from its grammar.
     local_only_keywords = {
         "default", "title", "pattern", "minLength", "maxLength",
-        "minItems", "maxItems",
+        "minItems", "maxItems", "format", "description", "minimum", "maximum",
+        "exclusiveMinimum", "exclusiveMaximum", "multipleOf", "minProperties",
+        "maxProperties", "uniqueItems", "examples", "deprecated", "readOnly", "writeOnly",
     }
 
     def walk(item: Any) -> None:
