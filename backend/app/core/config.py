@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     retry_base_seconds: float = Field(default=2, ge=0, le=30)
     retry_max_seconds: float = Field(default=30, ge=0, le=120)
     provider_timeout_seconds: float = Field(default=45, gt=0, le=120)
-    model_max_output_tokens: int = Field(default=2048, ge=512, le=16384)
+    model_max_output_tokens: int = Field(default=8192, ge=512, le=16384)
     parser_input_chars: int = Field(default=4000, ge=1000, le=20000)
     collector_excerpt_chars: int = Field(default=1200, ge=500, le=4000)
     evidence_quote_limit: int = Field(default=4, ge=1, le=20)

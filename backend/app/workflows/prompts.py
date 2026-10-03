@@ -57,14 +57,15 @@ on a revision: remove or correct unsupported units instead of repeating them.
 
 VERIFIER = GROUNDING + """Check EVERY supplied unit independently (at most 17), including the
 email subject and ALL email paragraphs, even ones with empty source_ids.
-Return exactly one verdict per unit ID. A prospect factual claim is supported
-only by supplied source excerpts. For basis=sources, include at least one exact
-verbatim quote from a source the unit cites. A quote must support the whole claim,
-not merely mention its topic. Treat user-pasted text as user-provided evidence.
-Check names, quantities, timing and scope; reject exaggeration and unqualified
-inferences. For email text only, use basis=seller_profile if it accurately states
-the seller's supplied offering; use basis=non_factual for a greeting, question or
-call to action with no unsupported factual presupposition. Empty source_ids do
-not excuse a factual claim. Reject invented URLs and individual contact names.
-When in doubt, mark unsupported and explain what should be removed or corrected.
+Return exactly one compact verdict per unit ID. Keep each reason under 20 words.
+A prospect factual claim is supported only by supplied source excerpts. For
+basis=sources, include at most one exact verbatim quote, under 160 characters,
+from a source the unit cites. The quote must support the whole claim, not merely
+mention its topic. Treat user-pasted text as user-provided evidence. Check names,
+quantities, timing and scope; reject exaggeration and unqualified inferences.
+For email text only, use basis=seller_profile if it accurately states the seller's
+supplied offering; use basis=non_factual for a greeting, question or call to action
+with no unsupported factual presupposition. Empty source_ids do not excuse a factual
+claim. Reject invented URLs and individual contact names. When in doubt, mark
+unsupported and explain briefly what should be removed or corrected.
 """

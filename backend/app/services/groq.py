@@ -22,8 +22,8 @@ NODE_OUTPUT_TOKEN_LIMITS = {
     "link_check": 300,
     "analyst": 1000,
     "matcher": 900,
-    "writer": 1400,
-    "verifier": 1200,
+    "writer": 2400,
+    "verifier": 4800,
     "eval_judge": 1200,
 }
 
@@ -137,15 +137,16 @@ class GroqService:
                         if request_options["model"].startswith("openai/gpt-oss-"):
                             request_options["reasoning_effort"] = "low"
                         completion = await self.client.chat.completions.create(**request_options)
+                        finish_reason = completion.choices[0].finish_reason if completion.choices else None
                         usage = completion.usage
-                        logger.info(
-                            "Groq usage node=%s prompt_tokens=%s completion_tokens=%s total_tokens=%s",
+                        logger.warning(
+                            "Groq usage node=%s prompt_tokens=%s completion_tokens=%s total_tokens=%s finish_reason=%s",
                             node,
                             getattr(usage, "prompt_tokens", "unavailable"),
                             getattr(usage, "completion_tokens", "unavailable"),
                             getattr(usage, "total_tokens", "unavailable"),
+                            finish_reason or "unavailable",
                         )
-                        finish_reason = completion.choices[0].finish_reason if completion.choices else None
                         if finish_reason == "length":
                             raise ServiceError(
                                 "model_output_truncated",
@@ -229,5 +230,6 @@ class GroqService:
                 return schema.model_validate_json(content, context=validation_context)
             except ValidationError:
                 # Never echo provider responses or validation inputs into logs.
+                logger.warning("Groq output failed local schema validation node=%s attempt=%s", node, schema_attempt + 1)
                 continue
         raise InvalidModelOutput()
