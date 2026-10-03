@@ -23,6 +23,9 @@ def test_strict_schema_keeps_required_property_names():
                 required = item.get("required")
                 if isinstance(properties, dict) and isinstance(required, list):
                     assert set(required) <= set(properties), model.__name__
+                assert "$ref" not in item
+                assert "$defs" not in item
+                assert "definitions" not in item
                 stack.extend(value for value in item.values() if isinstance(value, (dict, list)))
             elif isinstance(item, list):
                 stack.extend(item)

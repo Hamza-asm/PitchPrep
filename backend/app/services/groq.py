@@ -41,6 +41,25 @@ def strict_schema(schema: dict[str, Any]) -> dict[str, Any]:
     }
     map_keys = {"properties", "$defs", "definitions"}
 
+    def resolve_refs(item: Any, root: dict[str, Any]) -> None:
+        if isinstance(item, dict):
+            reference = item.get("$ref")
+            if isinstance(reference, str) and reference.startswith("#/"):
+                target: Any = root
+                for part in reference[2:].split("/"):
+                    target = target[part.replace("~1", "/").replace("~0", "~")]
+                item.clear()
+                item.update(deepcopy(target))
+            for value in list(item.values()):
+                resolve_refs(value, root)
+        elif isinstance(item, list):
+            for value in item:
+                resolve_refs(value, root)
+
+    resolve_refs(result, result)
+    result.pop("$defs", None)
+    result.pop("definitions", None)
+
     def walk(item: Any) -> None:
         if isinstance(item, dict):
             for keyword in local_only_keywords:
