@@ -17,6 +17,17 @@ From `backend/`, with the existing virtual environment:
 .\.venv\Scripts\python.exe -m uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8000
 ```
 
+For Render, set the service root directory to `backend`, use
+`pip install -r requirements.txt` as the build command, and use this start
+command so Uvicorn calls the application factory:
+
+```text
+uvicorn app.main:create_app --factory --host 0.0.0.0 --port $PORT
+```
+
+The repository also includes `render.yaml` with these settings and the
+`/api/health` health-check path.
+
 `GET /api/health` checks application liveness only. It does not contact providers.
 Starting the server also starts the queue worker. Queued generation requests use
 the configured Groq and Firecrawl credentials. Merely opening API docs or reading

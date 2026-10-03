@@ -138,7 +138,7 @@ Batch/CSV processing, automatic email sending, CRM integrations, user accounts, 
 | Evaluation dataset and runner | `backend/evals/` has no completed dataset, labeled verifier cases, scoring metrics, report writer, or offline evaluation tests yet. | Build the offline schemas, fixtures, metrics, runner, and documentation. |
 | Full live application verification | Persistence, progress streaming, history reopening, thin-data behavior, regeneration, feedback delivery, and LangSmith spans require an approved live research run. | Use the approved smoke run to verify the complete browser-to-provider flow. |
 | Final user-facing review | Automated browser checks cover representative states, but Hamza's product review, screen-reader pass, physical-device check, second-browser check, and Lighthouse review are still outstanding. | Review the running app and address concrete findings within PRD scope. |
-| Deployment | Hosting, access controls, hosted credentials, production origins, and publication have not been selected or approved. | Choose Render or Cloud Run, prepare deployment configuration, obtain review, then deploy. |
+| Deployment | Render configuration is prepared, but hosting approval, access controls, hosted credentials, production origins, and publication have not been selected or approved. | Review `render.yaml`, configure secrets/origins in Render, obtain approval, then deploy. |
 
 Phase 1 verification on 2026-10-03: `GET /api/health`, `/api/seller-profile`, and `/api/briefs?limit=1&offset=0` returned HTTP 200; the frontend origin returned HTTP 200. No secrets or saved record contents were printed.
 
