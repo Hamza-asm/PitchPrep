@@ -95,13 +95,13 @@ class GroqService:
             async def request() -> str:
                 async with self._semaphore:
                     try:
-                        completion = await self.client.chat.completions.create(
-                            model=self.settings.model_for(node),
-                            messages=[
+                        request_options: dict[str, Any] = {
+                            "model": self.settings.model_for(node),
+                            "messages": [
                                 {"role": "system", "content": instructions + correction},
                                 {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
                             ],
-                            response_format={
+                            "response_format": {
                                 "type": "json_schema",
                                 "json_schema": {
                                     "name": schema.__name__,
@@ -109,12 +109,29 @@ class GroqService:
                                     "schema": strict_schema(schema.model_json_schema()),
                                 },
                             },
-                            max_completion_tokens=min(
+                            "max_completion_tokens": min(
                                 self.settings.model_max_output_tokens,
                                 NODE_OUTPUT_TOKEN_LIMITS[node],
                             ),
-                            temperature=0.2,
+                            "temperature": 0.2,
+                        }
+                        if request_options["model"].startswith("openai/gpt-oss-"):
+                            request_options["reasoning_effort"] = "low"
+                        completion = await self.client.chat.completions.create(**request_options)
+                        usage = completion.usage
+                        logger.info(
+                            "Groq usage node=%s prompt_tokens=%s completion_tokens=%s total_tokens=%s",
+                            node,
+                            getattr(usage, "prompt_tokens", "unavailable"),
+                            getattr(usage, "completion_tokens", "unavailable"),
+                            getattr(usage, "total_tokens", "unavailable"),
                         )
+                        finish_reason = completion.choices[0].finish_reason if completion.choices else None
+                        if finish_reason == "length":
+                            raise ServiceError(
+                                "model_output_truncated",
+                                "The model ran out of output space. Retry this stage with the saved research.",
+                            )
                         if not completion.choices:
                             return ""
                         return completion.choices[0].message.content or ""
