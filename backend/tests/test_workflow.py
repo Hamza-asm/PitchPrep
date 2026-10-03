@@ -5,7 +5,7 @@ from collections import Counter
 import pytest
 
 from app.core.errors import ServiceError
-from app.schemas.research import ResearchRequest, SellerProfile
+from app.schemas.research import Analysis, Finding, ResearchRequest, SellerProfile
 from app.services.ports import Document
 from app.workflows.research import ResearchWorkflow
 
@@ -37,8 +37,9 @@ class FakeModel:
     async def generate(self, *, node, schema, instructions, payload, validation_context=None):
         self.calls[node] += 1
         sources = payload.get("sources", [])
+        evidence_quotes = payload.get("evidence_quotes", [])
         source_id = sources[0]["id"] if sources else "supplied_page"
-        quote = sources[0]["excerpt"] if sources else "Fixture Co provides repair services."
+        quote = evidence_quotes[0]["quote"] if evidence_quotes else "Fixture Co provides repair services."
         if node == "parser":
             value = {"company_name": None if self.missing_name else "Fixture Co", "website": "https://ignored.example/"}
         elif node == "source_collector":
@@ -72,6 +73,12 @@ def request(**overrides):
 
 
 SELLER = SellerProfile(offering="Maintenance software", ideal_customer="Repair businesses")
+
+
+def test_analysis_accepts_legacy_checkpoint_with_nine_findings():
+    finding = {"category": "snapshot", "text": "Fixture Co provides repair services.", "source_ids": ["supplied_page"]}
+    analysis = Analysis.model_validate({"findings": [Finding.model_validate(finding) for _ in range(9)]})
+    assert len(analysis.findings) == 9
 
 
 async def test_full_graph_and_progress(settings):

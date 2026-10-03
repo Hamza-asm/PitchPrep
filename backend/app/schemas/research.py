@@ -139,6 +139,11 @@ class Finding(CitedText):
 
 
 class Analysis(Schema):
+    # Persisted states remain compatible with older, larger workflow outputs.
+    findings: list[Finding] = Field(max_length=16)
+
+
+class AnalysisOutput(Analysis):
     findings: list[Finding] = Field(max_length=8)
 
 
@@ -148,6 +153,10 @@ class Opportunity(CitedText):
 
 
 class Matches(Schema):
+    opportunities: list[Opportunity] = Field(max_length=8)
+
+
+class MatchesOutput(Matches):
     opportunities: list[Opportunity] = Field(max_length=4)
 
 
@@ -164,11 +173,15 @@ class EmailSegment(Schema):
 
 class EmailDraft(Schema):
     subject: EmailSegment
+    paragraphs: list[EmailSegment] = Field(min_length=1, max_length=8)
+
+
+class EmailDraftOutput(EmailDraft):
     paragraphs: list[EmailSegment] = Field(min_length=1, max_length=4)
 
 
 class Draft(Schema):
-    claims: list[Claim] = Field(max_length=12)
+    claims: list[Claim] = Field(max_length=24)
     email: EmailDraft
 
     @model_validator(mode="after")
@@ -182,6 +195,11 @@ class Draft(Schema):
         return [*self.claims, self.email.subject, *self.email.paragraphs]
 
 
+class DraftOutput(Draft):
+    claims: list[Claim] = Field(max_length=12)
+    email: EmailDraftOutput
+
+
 class Verdict(Schema):
     unit_id: Identifier
     supported: bool
@@ -191,6 +209,10 @@ class Verdict(Schema):
 
 
 class Verification(Schema):
+    verdicts: list[Verdict] = Field(max_length=40)
+
+
+class VerificationOutput(Verification):
     verdicts: list[Verdict] = Field(max_length=17)
 
 

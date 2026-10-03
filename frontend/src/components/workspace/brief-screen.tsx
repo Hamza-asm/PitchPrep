@@ -6,6 +6,7 @@ import { Icon, Notice, Skeleton } from "../ui";
 
 const stages: [Stage, string][] = [["parsing", "Parsing"], ["collecting", "Collecting"], ["analyzing", "Analyzing"], ["matching", "Matching"], ["writing", "Writing"], ["verifying", "Verifying"]];
 const retryLabels: Record<WorkflowNode, string> = { parser: "Input Parser", source_fetch: "source collection", source_collector: "Source Collector", link_check: "link check", analyst: "Analyst", matcher: "Matcher", writer: "Writer", verifier: "Verifier" };
+const RETRY_COOLDOWN_MS = 90_000;
 
 function useBrief(id: string, onComplete: () => void) {
   const [detail, setDetail] = useState<BriefDetail | null>(null);
@@ -56,6 +57,26 @@ function useBrief(id: string, onComplete: () => void) {
   return { detail, setDetail, error, connection, reload: () => setRevision((n) => n + 1) };
 }
 
+function RetryStageButton({ detail, retrying, onRetry }: { detail: BriefDetail; retrying: boolean; onRetry: () => void }) {
+  const [clock, setClock] = useState(() => Date.now());
+  useEffect(() => {
+    const interval = window.setInterval(() => setClock(Date.now()), 1000);
+    return () => window.clearInterval(interval);
+  }, []);
+  if (!detail.retry_node) return null;
+  const unlockAt = Date.parse(detail.updated_at) + RETRY_COOLDOWN_MS;
+  const secondsLeft = Number.isFinite(unlockAt) ? Math.max(0, Math.ceil((unlockAt - clock) / 1000)) : 0;
+  const countdown = `${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, "0")}`;
+  return <div className="grid gap-2">
+    <button className="button button-primary" onClick={onRetry} disabled={retrying || secondsLeft > 0}>
+      {retrying ? "Starting retry…" : secondsLeft > 0 ? `Retry available in ${countdown}` : "Retry failed step"}
+      <span className="sr-only">: {retryLabels[detail.retry_node]}</span>
+    </button>
+    <p className="field-help">Only {retryLabels[detail.retry_node]} will run again. Completed stages and collected sources are reused.</p>
+    {secondsLeft > 0 ? <p className="field-help">Retry unlocks in {countdown}.</p> : <p className="field-help" role="status" aria-live="polite">Retry is ready.</p>}
+  </div>;
+}
+
 export function BriefScreen({ id, onEdit, onComplete }: { id: string; onEdit: (input: ResearchInput) => void; onComplete: () => void }) {
   const { detail, setDetail, error, connection, reload } = useBrief(id, onComplete);
   const [actionError, setActionError] = useState("");
@@ -83,7 +104,7 @@ export function BriefScreen({ id, onEdit, onComplete }: { id: string; onEdit: (i
     {actionError && <Notice>{actionError}<button className="button button-small button-secondary" onClick={reload}>Refresh brief</button></Notice>}
     {(active || !result) && <ProgressPanel detail={detail} />}
     {detail.status === "needs_confirmation" && <Notice kind="caution"><strong>Is this the right company link?</strong><p>{detail.message}</p><p className="break-all">{detail.request.target_url}</p><div className="brief-actions"><button className="button button-primary" disabled={confirming} onClick={confirm}>{confirming ? "Continuing…" : "Yes, continue with this link"}</button><button className="button button-secondary" onClick={() => onEdit(detail.request)}>Change the input</button></div></Notice>}
-    {detail.status === "failed" && <Notice kind="error"><strong>This run couldn’t finish.</strong><p>{detail.message}</p><div className="brief-actions">{detail.retry_node && <button className="button button-primary" onClick={retryStage} disabled={retrying}>Retry failed step{retrying ? "…" : ""}<span className="sr-only">: {retryLabels[detail.retry_node]}</span></button>}<button className="button button-secondary" onClick={() => onEdit(detail.request)}>Edit company details</button></div>{detail.retry_node && <p className="field-help">Only {retryLabels[detail.retry_node]} will run again. Completed stages and collected sources are reused.</p>}</Notice>}
+    {detail.status === "failed" && <Notice kind="error"><strong>This run couldn’t finish.</strong><p>{detail.message}</p><div className="brief-actions"><RetryStageButton detail={detail} retrying={retrying} onRetry={retryStage} /><button className="button button-secondary" onClick={() => onEdit(detail.request)}>Edit company details</button></div></Notice>}
     {detail.status === "needs_input" && <Notice kind="caution"><strong>A little more context is needed.</strong><p>{detail.message}</p><div className="brief-actions">{detail.retry_node === "source_fetch" && <button className="button button-primary" onClick={retryStage} disabled={retrying}>{retrying ? "Retrying source collection…" : "Retry source collection"}</button>}<button className="button button-secondary" onClick={() => onEdit(detail.request)}>Edit company details</button></div>{detail.retry_node === "source_fetch" && <p className="field-help">This retries source collection only. Editing fields does not start a run; submit the form only when you want a new research run.</p>}</Notice>}
     {result && <>
       {active && <Notice kind="info">Your previous result stays available while the new email is prepared.</Notice>}

@@ -13,10 +13,13 @@ from app.core.config import Settings
 from app.core.errors import ServiceError
 from app.schemas.research import (
     Analysis,
+    AnalysisOutput,
     CollectedEvidence,
     Draft,
+    DraftOutput,
     LinkAssessment,
     Matches,
+    MatchesOutput,
     ParsedCompany,
     ProgressEvent,
     ResearchRequest,
@@ -26,6 +29,7 @@ from app.schemas.research import (
     SourceType,
     Stage,
     Verification,
+    VerificationOutput,
     WorkflowNode,
     WorkflowState,
 )
@@ -175,19 +179,19 @@ class ResearchWorkflow:
         return state
 
     async def _analyze(self, state: WorkflowState) -> WorkflowState:
-        analysis = await self._generate("analyst", Analysis, prompts.ANALYST, self._evidence_payload(state), state)
+        analysis = await self._generate("analyst", AnalysisOutput, prompts.ANALYST, self._evidence_payload(state), state)
         return updated(state, analysis=analysis)
 
     async def _match(self, state: WorkflowState) -> WorkflowState:
         matches = await self._generate(
-            "matcher", Matches, prompts.MATCHER,
+            "matcher", MatchesOutput, prompts.MATCHER,
             {**self._evidence_payload(state), "analysis": state.analysis.model_dump() if state.analysis else None, "seller": state.seller.model_dump()}, state,
         )
         return updated(state, matches=matches)
 
     async def _write(self, state: WorkflowState) -> WorkflowState:
         draft = await self._generate(
-            "writer", Draft, prompts.WRITER,
+            "writer", DraftOutput, prompts.WRITER,
             {
                 **self._evidence_payload(state), "seller": state.seller.model_dump(),
                 "analysis": state.analysis.model_dump() if state.analysis else None,
@@ -210,7 +214,7 @@ class ResearchWorkflow:
         if state.draft is None:
             raise ValueError("Writer must run before Verifier")
         report = await self._generate(
-            "verifier", Verification, prompts.VERIFIER,
+            "verifier", VerificationOutput, prompts.VERIFIER,
             {**self._evidence_payload(state), "seller": state.seller.model_dump(), "units": [unit.model_dump() for unit in state.draft.units()]}, state,
         )
         return updated(state, verification=check_verdicts(state.draft, report, state.sources))

@@ -56,6 +56,8 @@ attempts so feedback stays attached to the result being reviewed.
 `pitchprep_enqueue_again` accepts link confirmation, email regeneration, or a
 checkpoint retry from eligible states, with a matching version. A retry requires
 a supported node name in the saved workflow state and preserves prior progress.
+For older interrupted records, it derives the node from the last persisted
+progress event and stores that node before queueing the retry.
 `pitchprep_save_email` uses the same optimistic version check to prevent stale
 edits.
 

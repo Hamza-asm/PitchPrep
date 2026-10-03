@@ -156,6 +156,9 @@ Update this file after each phase with the implementation changes, checks actual
 - [x] Firecrawl source fetching is separated from model-based evidence extraction, preventing later Groq failures from scraping again.
 - [x] “Edit company details” opens the form without starting work. A new full run begins only after explicit form submission.
 - [x] No-source pauses can retry source collection alone.
+- [x] Interrupted runs without a saved node infer it from persisted progress; the retry button shows a visible 90-second countdown before enabling.
 - [x] Reduced model context and output budgets: parser input 4,000 characters, collector excerpts 1,200 characters, four verified quotes of at most 700 characters, fewer news snippets, and per-node output-token caps. Groq 429 responses are not automatically retried.
 - [x] Supabase development RPC and job-kind constraint updated to permit checkpoint retries; database schema/function definition verified via MCP.
-- [ ] Frontend/backend software checks and live provider behavior remain unverified in this update. No Groq or Firecrawl calls were made.
+- [x] Frontend `npm run lint` and `npm run build` pass for the countdown and retry UI update.
+- [ ] Backend software checks and live provider behavior remain unverified in this update. No Groq or Firecrawl calls were made.
+- [x] Older saved workflow states retain their original list-size compatibility limits; separate constrained schemas keep new model output budgets in place.

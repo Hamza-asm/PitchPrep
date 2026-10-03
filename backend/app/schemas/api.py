@@ -80,16 +80,41 @@ class BriefDetail(Schema):
     @classmethod
     def from_record(cls, record: BriefRecord) -> "BriefDetail":
         data = record.model_dump(include=set(cls.model_fields))
-        retryable_input = (
-            record.status == "needs_input" and record.state
-            and record.state.retry_node == "source_fetch"
-        )
-        data["retry_node"] = (
-            record.state.retry_node
-            if record.state and (record.status == "failed" or retryable_input)
-            else None
-        )
+        data["retry_node"] = cls._retry_node(record)
         return cls.model_validate(data)
+
+    @staticmethod
+    def _retry_node(record: BriefRecord) -> WorkflowNode | None:
+        state = record.state
+        if state is None:
+            return None
+        if record.status == "needs_input" and record.error_code == "no_sources":
+            return "source_fetch"
+        if record.status != "failed":
+            return None
+        if state.retry_node:
+            return state.retry_node
+
+        # Older interrupted runs may have progress saved without the node checkpoint.
+        event = next((item for item in reversed(record.progress) if item.status in {"active", "failed"}), None)
+        if event is None:
+            return None
+        by_stage: dict[str, WorkflowNode] = {
+            "parsing": "parser",
+            "analyzing": "analyst",
+            "matching": "matcher",
+            "writing": "writer",
+            "verifying": "verifier",
+        }
+        if event.stage.value in by_stage:
+            return by_stage[event.stage.value]
+        if event.stage.value == "collecting":
+            if not state.sources:
+                return "source_fetch"
+            if state.evidence is None:
+                return "source_collector"
+            return "link_check"
+        return None
 
 
 class BriefSummary(Schema):

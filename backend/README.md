@@ -61,6 +61,10 @@ Optional environment settings and defaults:
 | `WORKER_LEASE_SECONDS` | `120` |
 | `STREAM_POLL_SECONDS` | `1` |
 
+Saved workflow-state schemas retain the prior list-size limits so older briefs
+remain readable. Separate constrained schemas keep new Analyst, Matcher, Writer,
+and Verifier responses within the current token budget.
+
 `GROQ_BASE_URL` and `LANGSMITH_ENDPOINT` may override SDK endpoint defaults.
 Provider retries and schema retries are separate bounded layers: a node may
 make up to four requests with the defaults if both kinds of failures occur.

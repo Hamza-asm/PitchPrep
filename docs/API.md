@@ -59,8 +59,10 @@ For a failed run, `POST /api/briefs/{id}/retry` resumes its saved failed node an
 reuses earlier outputs. Firecrawl collection and evidence extraction are separate
 checkpoints, so model failures after collection do not scrape again. If source
 collection found no usable sources, the same route retries just that collection
-step. “Edit company details” only opens the form; submitting it deliberately
-creates a new research run.
+step. Older interrupted runs without a node checkpoint infer it from their latest
+saved progress event. The retry action becomes available 90 seconds after the
+failure timestamp. “Edit company details” only opens the form; submitting it
+deliberately creates a new research run.
 
 Email edits require `subject`, `body`, and `expected_version`. The edit is saved
 separately as `email_edit`; the cited generated email remains in `result.email`.
