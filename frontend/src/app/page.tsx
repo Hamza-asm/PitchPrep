@@ -1,69 +1,27 @@
-import Image from "next/image";
+import Link from "next/link";
+import { Icon, Logo } from "@/components/ui";
+import { LandingMotion, MobileMenu } from "@/components/landing-motion";
+
+const stages = [
+  ["text", "Input Parser", "Makes sense of the details you paste."],
+  ["globe", "Source Collector", "Reads your link and finds recent news."],
+  ["chart", "Analyst", "Finds the signals worth a conversation."],
+  ["link", "Matcher", "Connects their needs to what you sell."],
+  ["mail", "Writer", "Turns the research into a brief and email."],
+  ["check", "Verifier", "Checks claims against the source material."],
+] as const;
 
 export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+  return <>
+    <header className="landing-nav wrap"><Link href="/" className="logo-pill" aria-label="PitchPrep home"><Logo /></Link><nav className="nav-links" aria-label="Main navigation"><a href="#how-it-works">How it works</a><a href="#trust">Trust</a><a href="#pipeline">Pipeline</a></nav><Link href="/app" className="button button-dark nav-cta">Let&apos;s prep your pitch <Icon name="arrow" /></Link><MobileMenu /></header>
+    <main id="main">
+      <section className="hero" aria-labelledby="hero-heading"><div className="hero-copy wrap"><h1 id="hero-heading">Walk into every<br className="desktop-break" /> pitch <mark>prepared.</mark></h1><p>Company research, checked against its sources.<br className="desktop-break" /> A clearer brief. A more relevant first email.</p><Link href="/app" className="button button-primary hero-cta">Let&apos;s prep your pitch <Icon name="arrow-circle" /></Link></div><div className="hero-art" aria-hidden="true">{(["text", "globe", "chart", "link", "mail"] as const).map((name, i) => <div className={`tile-position tile-${i}`} key={name}><div className="iso-tile"><div className="tile-glyph"><Icon name={name} /></div></div></div>)}</div></section>
+      <section id="how-it-works" className="section wrap" aria-labelledby="how-heading"><div className="section-heading reveal"><span className="label-pill">How it works</span><h2 id="how-heading">A little context.<br />A much clearer conversation.</h2><p>Start with a company. Leave with research you can review.</p></div><div className="feature-grid">
+        <article className="feature-card reveal"><div className="mockup mockup-brief" aria-hidden="true"><div className="mock-sheet"><div className="mock-title"><Icon name="document" /> Your prospect brief <span className="tiny-label">Preview</span></div>{["Company snapshot", "Recent signals", "Likely needs"].map((label, i) => <div key={label} className={`mock-claim mock-claim-${i}`}><div className="mock-claim-heading">{label}<span className="badge verified"><Icon name="check" /> Verified</span></div><div className="ink-line" /><div className="ink-line short" /><span className="mock-source"><Icon name="link" /> Linked to a source</span></div>)}</div></div><div className="feature-copy"><h3>Research you can trace.</h3><p>Open the source behind a claim.<br />See what holds up before you reach out.</p></div></article>
+        <article className="feature-card reveal"><div className="mockup mockup-input" aria-hidden="true"><div className="mock-input-panel"><div className="mock-title"><Icon name="globe" /> Start with what you know</div><div className="mock-label">Company name</div><div className="mock-field"><span className="ink-line" /></div><div className="mock-label">Website or social link</div><div className="mock-field"><Icon name="link" /><span className="ink-line" /></div><div className="mock-label">A little more context <span>Optional</span></div><div className="mock-paste"><span className="ink-line" /><span className="ink-line" /><span className="ink-line short" /></div><div className="mock-toggle"><span>Website</span><span>Social link</span><Icon name="check" /></div></div></div><div className="feature-copy"><h3>Works with what you have.</h3><p>A website, a social page, or pasted details.<br />Thin evidence is called out, never filled in.</p></div></article>
+      </div></section>
+      <section id="pipeline" className="section pipeline-section wrap" aria-labelledby="pipeline-heading"><div className="section-heading reveal"><span className="label-pill">Pipeline</span><h2 id="pipeline-heading">Six steps.<br />Every claim checked.</h2><p>Focused work at each step, with verification at the end.</p></div><div className="pipeline-tree reveal"><div className="pipeline-root reveal" data-reveal-delay="80"><Logo markOnly /> PitchPrep pipeline</div><div className="pipeline-grid">{stages.map(([icon, title, description], i) => <article className={`pipeline-node node-${i} reveal`} data-reveal-delay={String(160 + i * 65)} key={title}><div className="node-heading"><Icon name={icon} /><span className="stage-number">0{i + 1}</span></div><h3>{title}</h3><p>{description}</p></article>)}</div></div><p className="pipeline-note reveal" data-reveal-delay="560"><Icon name="refresh" /> Unsupported claims go back for revision. Anything still unsupported is removed.</p></section>
+      <section id="trust" className="trust-section" aria-labelledby="trust-heading"><div className="trust-blob blob-one" aria-hidden="true"><i /></div><div className="trust-blob blob-two" aria-hidden="true"><i /></div><div className="trust-content wrap reveal"><span className="label-pill">Trust</span><h2 id="trust-heading">A good pitch starts<br />with <mark>solid ground.</mark></h2><p>Every retained claim has a source. The Verifier checks the evidence, removes unsupported statements, and tells you when the picture is incomplete.</p><div className="trust-principles"><span><Icon name="link" /> Sources you can open</span><span><Icon name="check" /> Claims checked before delivery</span><span><Icon name="alert" /> Evidence limits made visible</span></div></div><div className="closing wrap reveal"><Link href="/app" className="closing-link"><span className="closing-dot" aria-hidden="true" /><span>Let&apos;s prep your pitch</span><Icon name="arrow-circle" /></Link><p>Your research. Your judgment. Your next conversation.</p></div><footer className="site-footer wrap reveal" data-reveal-delay="140"><Link href="/" className="footer-logo" aria-label="PitchPrep home"><Logo /></Link><p>Know the company. Make the connection.</p><nav aria-label="Footer"><a href="#how-it-works">How it works</a><a href="#trust">Trust</a><a href="#pipeline">Pipeline</a></nav></footer></section>
+    </main><LandingMotion />
+  </>;
 }

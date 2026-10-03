@@ -1,36 +1,42 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PitchPrep frontend
 
-## Getting Started
+Next.js App Router, TypeScript, Tailwind, Outfit, and Geist Mono. Visual requirements live in `../docs/DESIGN.md`; product behavior lives in `../docs/PRD.md`.
 
-First, run the development server:
+## Local setup
 
-```bash
+From `frontend/`:
+
+```sh
+npm ci
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Use `frontend/.env.example` to create your local `.env`. Set `NEXT_PUBLIC_API_BASE_URL` to the backend origin, without `/api` or a trailing path. Public environment variables are embedded at build time; rebuild after changing the backend origin. Provider keys and Supabase credentials belong only in the backend environment.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Start the backend separately using `../backend/README.md`. Its allowed CORS origin must match the frontend origin. Open `http://localhost:3000`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Screens
 
-## Learn More
+- `/`: product introduction, decorative mockups, pipeline explanation, and calls to open the workspace.
+- `/app`: seller setup, company/link/pasted-text input, and saved brief history.
+- `/app/[id]`: streamed progress with polling recovery, link confirmation, sourced brief, email editor, regeneration, and feedback.
 
-To learn more about Next.js, take a look at the following resources:
+Failed submissions retain input and reuse the same idempotency key when retried unchanged. Mutating saved briefs uses the API's expected version. Email regeneration requires saving edits first; manual email edits are identified as unverified. Claims and evidence limitations remain visible alongside the email. Source links only allow HTTP(S).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Research begins only on an explicit submission or regeneration action. There is no automatic email sending or browser access to the database.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Verification without provider calls
 
-## Deploy on Vercel
+```sh
+npm run lint
+npm run build
+npm run test:e2e
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The browser suite creates a separate production build in `.next-e2e` using a fixed, intercepted API origin, then serves it on `127.0.0.1:3100` with installed Google Chrome. Your `.env` and regular `.next` build are unchanged. Set `PLAYWRIGHT_CHANNEL=msedge` to use installed Edge instead. A clean build needs access to Google Fonts for Next.js font compilation; fonts are then served locally.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+All API routes in the browser tests are intercepted with synthetic fixtures. Requests to other hosts are blocked, and service workers are disabled. No backend process, Groq, Firecrawl, Supabase, or LangSmith connection is needed by the tests. Tests cover landing accessibility and reduced motion, seller setup, submission retry, source links, email edits/copy/regeneration, feedback, confirmation, progress, connection errors, and mobile layout.
+
+Screenshots and failure traces are written to ignored `test-results/`. On restricted Windows runners, Playwright needs permission to stop its local server process tree during teardown.
+
+See `../docs/FRONTEND_REVIEW.md` for the verification record and remaining checks.
