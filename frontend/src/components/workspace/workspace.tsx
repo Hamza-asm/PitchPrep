@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { api, messageOf, statusLabels, type BriefPage, type ResearchInput, type SellerProfile } from "@/lib/api";
-import { Icon, Logo, Notice, Skeleton } from "../ui";
+import { Icon, Logo, Notice, SharedDemoNotice, Skeleton } from "../ui";
 import { SellerForm, TargetForm } from "./forms";
 import { BriefScreen } from "./brief-screen";
 
@@ -38,6 +38,7 @@ export function Workspace({ briefId }: { briefId?: string }) {
   const saved = (value: SellerProfile) => { setProfile(value); setEditSeller(false); };
   return <>
     <header className="app-header"><div className="app-header-inner wrap"><div className="flex items-center"><Link href="/" aria-label="PitchPrep home"><Logo /></Link><span className="workspace-tag">Your research workspace</span></div><Link href="/" className="button button-quiet button-small">Back to home<Icon name="external" /></Link></div></header>
+    <SharedDemoNotice />
     <div className="workspace-shell wrap"><aside className="workspace-sidebar" aria-label="Workspace navigation"><div className="sidebar-actions"><Link className="button button-primary" href="/app" onClick={() => { setEditSeller(false); setEditInput(undefined); }}><Icon name="plus" /> New brief</Link><button className="button button-secondary" onClick={() => { setEditSeller(true); setEditInput(undefined); }}><Icon name="settings" /> Seller profile</button></div><div className="sidebar-history"><div className="sidebar-heading"><span className="flex items-center gap-2"><Icon name="history" /> Recent briefs</span><button type="button" className="icon-button" aria-label="Refresh history" onClick={() => void loadHistory()} disabled={historyBusy}><Icon name="refresh" /></button></div>
       {historyError && <Notice>{historyError}<button className="button button-small button-secondary" onClick={() => void loadHistory()}>Retry history</button></Notice>}
       {!history && historyBusy && <Skeleton label="Loading history" />}
@@ -46,7 +47,7 @@ export function Workspace({ briefId }: { briefId?: string }) {
       {history?.next_offset != null && <button className="button button-quiet button-small mt-2" disabled={historyBusy} onClick={() => void loadHistory(history.next_offset!)}>{historyBusy ? "Loading…" : "Load older briefs"}</button>}
     </div></aside>
     <main id="main" className="workspace-main">
-      {loading ? <Skeleton /> : error ? <><div className="page-heading"><h1>Let’s get you connected.</h1><p>Your research workspace will be here when the connection returns.</p></div><Notice>{error}<button className="button button-secondary button-small" onClick={() => void loadProfile()}>Try again</button></Notice></> : editSeller || !profile ? <SellerForm key={profile ? "edit" : "setup"} profile={profile} onSaved={saved} onCancel={profile ? () => setEditSeller(false) : undefined} /> : editInput ? <TargetForm key="edit-input" initial={editInput} /> : briefId ? <BriefScreen key={briefId} id={briefId} onEdit={setEditInput} onComplete={loadHistory} /> : <TargetForm />}
+      {loading ? <Skeleton /> : error ? <><div className="page-heading"><h1>Let’s get you connected.</h1><p>Your research workspace will be here when the connection returns.</p></div><Notice>{error}<button className="button button-secondary button-small" onClick={() => void loadProfile()}>Try again</button></Notice></> : editSeller || !profile ? <SellerForm key={profile ? "edit" : "setup"} profile={profile} onSaved={saved} onCancel={profile ? () => setEditSeller(false) : undefined} /> : editInput ? <TargetForm key="edit-input" initial={editInput} onCancel={() => setEditInput(undefined)} /> : briefId ? <BriefScreen key={briefId} id={briefId} onEdit={setEditInput} onComplete={loadHistory} /> : <TargetForm />}
     </main></div>
   </>;
 }

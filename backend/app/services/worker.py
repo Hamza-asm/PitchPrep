@@ -35,6 +35,8 @@ class ResearchWorker:
             try:
                 if await self.run_once():
                     continue
+            except RepositoryError as error:
+                logger.warning("Research worker could not access saved work: %s", error.code)
             except Exception:
                 # Do not log exception strings, requests, credentials or source text.
                 logger.warning("Research worker could not access saved work; it will poll again.")

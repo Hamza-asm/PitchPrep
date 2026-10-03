@@ -19,6 +19,7 @@ the exact schemas at `/docs` and `/openapi.json`.
 | GET | `/api/briefs/{id}` | Input, progress, status, verified result, manual email edit, version, errors |
 | GET | `/api/briefs/{id}/stream` | SSE snapshots that can be reconnected |
 | POST | `/api/briefs/{id}/confirm-link` | Confirm a mismatched link and enqueue continuation |
+| POST | `/api/briefs/{id}/retry` | Resume only the saved failed workflow node; requires `expected_version` |
 | PUT | `/api/briefs/{id}/email` | Save the human-edited subject/body |
 | POST | `/api/briefs/{id}/email/regenerate` | Enqueue email-only regeneration using saved evidence |
 | POST | `/api/briefs/{id}/feedback` | Save rating `1` or `-1` and optional comment; HTTP 204 |
@@ -53,6 +54,13 @@ Link confirmation requires `{"confirmed": true, "expected_version": N}` using
 the latest detail version. It is accepted only for `needs_confirmation`. Saved
 sources are reused; collection is not repeated. To correct a name or link, submit
 a new run with a new idempotency key.
+
+For a failed run, `POST /api/briefs/{id}/retry` resumes its saved failed node and
+reuses earlier outputs. Firecrawl collection and evidence extraction are separate
+checkpoints, so model failures after collection do not scrape again. If source
+collection found no usable sources, the same route retries just that collection
+step. “Edit company details” only opens the form; submitting it deliberately
+creates a new research run.
 
 Email edits require `subject`, `body`, and `expected_version`. The edit is saved
 separately as `email_edit`; the cited generated email remains in `result.email`.

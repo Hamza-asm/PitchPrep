@@ -23,7 +23,7 @@ export function SellerForm({ profile, onSaved, onCancel }: { profile: SellerProf
   </form></>;
 }
 
-export function TargetForm({ initial }: { initial?: ResearchInput }) {
+export function TargetForm({ initial, onCancel }: { initial?: ResearchInput; onCancel?: () => void }) {
   const router = useRouter();
   const [value, setValue] = useState<ResearchInput>(initial ?? { company_name: "", target_url: "", pasted_text: "", link_confirmed: false });
   const [busy, setBusy] = useState(false);
@@ -45,6 +45,6 @@ export function TargetForm({ initial }: { initial?: ResearchInput }) {
     <div className="field"><label className="field-label" htmlFor="company-name">Company name<small>Required</small></label><input id="company-name" autoComplete="organization" required maxLength={200} value={value.company_name} onChange={(e) => change("company_name", e.target.value)} placeholder="The company you’d like to work with" aria-invalid={!!fields.company_name} aria-describedby={fields.company_name ? "name-error" : undefined} />{fields.company_name && <p id="name-error" className="field-help text-[var(--error)]">{fields.company_name}</p>}</div>
     <div className="field"><label className="field-label" htmlFor="target-url">Website or social link<small>Required</small></label><input id="target-url" type="url" required value={value.target_url} onChange={(e) => change("target_url", e.target.value)} placeholder="Paste the company’s full link" aria-invalid={!!fields.target_url} aria-describedby="url-help url-error" /><p id="url-help" className="field-help">Use the company’s website. If it has none, use its Instagram, Facebook, or LinkedIn page.</p><p id="url-error" className="field-help text-[var(--error)]">{fields.target_url}</p></div>
     <div className="field"><label className="field-label" htmlFor="pasted-text">A little more context<small>Optional</small></label><textarea id="pasted-text" maxLength={20000} value={value.pasted_text} onChange={(e) => change("pasted_text", e.target.value)} placeholder="Paste listing details, opening hours, reviews, or other company information." aria-describedby="paste-help" /><p id="paste-help" className="field-help">Have a Google Maps listing? Paste its text here. We don’t scrape Maps.</p></div>
-    <div className="form-footer"><p><Icon name="check" /> Every retained claim gets checked.</p><button className="button button-primary" disabled={busy || !value.company_name.trim()}>{busy ? "Starting your brief…" : "Prepare my brief"}<Icon name="arrow-circle" /></button></div>
+    <div className="form-footer"><p><Icon name="check" /> Every retained claim gets checked.</p><div className="flex flex-wrap gap-2">{onCancel && <button type="button" className="button button-secondary" onClick={onCancel}>Return to saved brief</button>}<button className="button button-primary" disabled={busy || !value.company_name.trim()}>{busy ? "Starting your brief…" : "Prepare my brief"}<Icon name="arrow-circle" /></button></div></div>
   </form></>;
 }

@@ -26,6 +26,7 @@ from app.schemas.research import (
     SourceType,
     Stage,
     Verification,
+    WorkflowNode,
     WorkflowState,
 )
 from app.services.ports import ModelService, Output, WebService
@@ -75,8 +76,11 @@ class ResearchWorkflow:
     def _evidence_payload(state: WorkflowState) -> dict[str, Any]:
         return {
             "company_name": state.request.company_name,
-            "sources": [source.model_dump(mode="json") for source in state.sources],
-            "selected_excerpts": state.evidence.model_dump() if state.evidence else None,
+            "sources": [
+                {"id": source.id, "type": source.type.value, "title": source.title, "url": str(source.url) if source.url else None}
+                for source in state.sources
+            ],
+            "evidence_quotes": [quote.model_dump() for quote in state.evidence.excerpts] if state.evidence else [],
         }
 
     async def _parse(self, state: WorkflowState) -> WorkflowState:
@@ -84,7 +88,7 @@ class ResearchWorkflow:
             return updated(state, parsed=ParsedCompany(company_name=state.request.company_name))
         parsed = await self._generate(
             "parser", ParsedCompany, prompts.PARSER,
-            {"pasted_text": state.request.pasted_text}, state,
+            {"pasted_text": state.request.pasted_text[: self.settings.parser_input_chars]}, state,
         )
         if not parsed.company_name:
             return updated(
@@ -94,7 +98,7 @@ class ResearchWorkflow:
             )
         return updated(state, parsed=parsed)
 
-    async def _collect(self, state: WorkflowState) -> WorkflowState:
+    async def _fetch_sources(self, state: WorkflowState) -> WorkflowState:
         sources: list[Source] = []
         notes = list(state.limitations)
         limited = False
@@ -122,15 +126,31 @@ class ResearchWorkflow:
             return updated(
                 state, limited_data=True, limitations=notes, status=RunStatus.NEEDS_INPUT,
                 error_code="no_sources",
+                retry_node="source_fetch",
                 message="The link could not be read and no usable news was found. Paste company details or provide another link.",
             )
-        collected = updated(state, sources=sources, limitations=notes, limited_data=limited)
-        evidence = await self._generate("source_collector", CollectedEvidence, prompts.COLLECTOR, self._evidence_payload(collected), collected)
-        by_id = {source.id: source for source in sources}
-        valid = [quote for quote in evidence.excerpts if quote_exists(quote, by_id)]
-        if len(valid) != len(evidence.excerpts):
-            notes.append("Some extracted excerpts were discarded because they did not match the original source text.")
-        return updated(collected, evidence=CollectedEvidence(excerpts=valid), limited_data=limited or not valid, limitations=notes)
+        return updated(state, sources=sources, limitations=notes, limited_data=limited)
+
+    async def _collect(self, state: WorkflowState) -> WorkflowState:
+        by_id = {source.id: source for source in state.sources}
+        collector_input = {
+            "company_name": state.request.company_name,
+            "sources": [
+                {"id": source.id, "type": source.type.value, "title": source.title,
+                 "excerpt": source.excerpt[: self.settings.collector_excerpt_chars]}
+                for source in state.sources
+            ],
+        }
+        evidence = await self._generate("source_collector", CollectedEvidence, prompts.COLLECTOR, collector_input, state)
+        valid = [
+            quote for quote in evidence.excerpts
+            if len(quote.quote) <= self.settings.evidence_quote_chars and quote_exists(quote, by_id)
+        ]
+        retained = valid[: self.settings.evidence_quote_limit]
+        notes = list(state.limitations)
+        if len(valid) != len(evidence.excerpts) or len(retained) != len(valid):
+            notes.append("Some extracted excerpts were discarded because they were unmatched or exceeded the evidence limit.")
+        return updated(state, evidence=CollectedEvidence(excerpts=retained), limited_data=state.limited_data or not retained, limitations=notes)
 
     async def _link_check(self, state: WorkflowState) -> WorkflowState:
         if state.request.link_confirmed:
@@ -144,7 +164,8 @@ class ResearchWorkflow:
             return state
         assessment = await self._generate(
             "link_check", LinkAssessment, prompts.LINK_CHECK,
-            {"company_name": state.request.company_name, "page": page.model_dump(mode="json")}, state,
+            {"company_name": state.request.company_name,
+             "page": {"title": page.title, "excerpt": page.excerpt[: self.settings.collector_excerpt_chars]}}, state,
         )
         if not assessment.matches:
             return updated(
@@ -194,6 +215,39 @@ class ResearchWorkflow:
         )
         return updated(state, verification=check_verdicts(state.draft, report, state.sources))
 
+    @staticmethod
+    def _prepare_stage_retry(state: WorkflowState, node: WorkflowNode) -> WorkflowState:
+        downstream: dict[WorkflowNode, set[str]] = {
+            "parser": {"parsed", "sources", "evidence", "analysis", "matches", "draft", "verification"},
+            "source_fetch": {"sources", "evidence", "analysis", "matches", "draft", "verification"},
+            "source_collector": {"evidence", "analysis", "matches", "draft", "verification"},
+            "link_check": {"analysis", "matches", "draft", "verification"},
+            "analyst": {"analysis", "matches", "draft", "verification"},
+            "matcher": {"matches", "draft", "verification"},
+            "writer": {"draft", "verification"},
+            "verifier": {"verification"},
+        }
+        cleared: dict[str, Any] = {
+            "parsed": None, "sources": [], "evidence": None, "analysis": None,
+            "matches": None, "draft": None, "verification": None,
+        }
+        changes = {key: cleared[key] for key in downstream[node]}
+        keep_previous_result = state.email_tone is not None and state.result is not None
+        changes.update(
+            status=RunStatus.RUNNING,
+            error_code=None,
+            message=None,
+            retry_node=node,
+            revision_attempts=0 if node in {"parser", "source_fetch", "source_collector", "link_check", "analyst", "matcher"} else state.revision_attempts,
+            result=state.result if keep_previous_result else None,
+        )
+        if node in {"parser", "source_fetch"}:
+            changes["limitations"] = []
+            changes["limited_data"] = False
+        elif "sources" in changes:
+            changes["sources"] = []
+        return updated(state, **changes)
+
     async def run(
         self, request: ResearchRequest, seller: SellerProfile, *, on_progress: ProgressCallback | None = None,
         on_state: StateCallback | None = None, saved_state: WorkflowState | None = None,
@@ -208,21 +262,33 @@ class ResearchWorkflow:
             elif mode == "email" and saved_state.result:
                 initial = updated(saved_state, status=RunStatus.RUNNING, error_code=None, message=None,
                                   revision_attempts=0, verification=None, email_tone=tone)
+            elif mode == "retry" and saved_state.retry_node:
+                initial = self._prepare_stage_retry(saved_state, saved_state.retry_node)
             else:
                 raise ValueError("Invalid workflow mode")
         latest = initial
         active_stage: Stage | None = None
+        active_node: WorkflowNode | None = None
         graph = StateGraph(WorkflowState)
 
-        def node(stage: Stage, operation: Callable[[WorkflowState], Awaitable[WorkflowState]]) -> Callable[[WorkflowState], Awaitable[WorkflowState]]:
+        def node(name: WorkflowNode, stage: Stage, operation: Callable[[WorkflowState], Awaitable[WorkflowState]]) -> Callable[[WorkflowState], Awaitable[WorkflowState]]:
             async def wrapped(state: WorkflowState) -> WorkflowState:
-                nonlocal active_stage
+                nonlocal active_node, active_stage, latest
+                active_node = name
                 active_stage = stage
+                ready = updated(state, retry_node=name)
+                latest = ready
+                if on_state:
+                    await on_state(ready)
                 if on_progress:
                     await on_progress(ProgressEvent(stage=stage, status="active", revision_attempt=state.revision_attempts))
                 span = self.tracer.span(operation.__name__.lstrip("_")) if self.tracer else nullcontext()
                 with span:
                     result = await operation(state)
+                result = updated(
+                    result,
+                    retry_node=name if name == "source_fetch" and result.status == RunStatus.NEEDS_INPUT else None,
+                )
                 if on_progress:
                     await on_progress(ProgressEvent(stage=stage, status="complete", revision_attempt=result.revision_attempts))
                 return result
@@ -230,6 +296,7 @@ class ResearchWorkflow:
 
         for name, stage, operation in (
             ("parser", Stage.PARSING, self._parse),
+            ("source_fetch", Stage.COLLECTING, self._fetch_sources),
             ("source_collector", Stage.COLLECTING, self._collect),
             ("link_check", Stage.COLLECTING, self._link_check),
             ("analyst", Stage.ANALYZING, self._analyze),
@@ -237,14 +304,14 @@ class ResearchWorkflow:
             ("writer", Stage.WRITING, self._write),
             ("verifier", Stage.VERIFYING, self._verify),
         ):
-            graph.add_node(name, node(stage, operation))
+            graph.add_node(name, node(name, stage, operation))
 
         def revise(state: WorkflowState) -> WorkflowState:
             return updated(state, revision_attempts=state.revision_attempts + 1)
 
         def finish(state: WorkflowState) -> WorkflowState:
             result = finalize(state)
-            if mode == "email" and initial.result:
+            if initial.email_tone is not None and initial.result:
                 result = result.model_copy(update={
                     "claims": initial.result.claims,
                     "limited_data": initial.result.limited_data or any(not v.supported for v in state.verification.verdicts),
@@ -256,6 +323,9 @@ class ResearchWorkflow:
             return updated(state, result=result, status=RunStatus.COMPLETED)
 
         def after_parse(state: WorkflowState) -> str:
+            return "source_fetch" if state.status == RunStatus.RUNNING else END
+
+        def after_fetch(state: WorkflowState) -> str:
             return "source_collector" if state.status == RunStatus.RUNNING else END
 
         def after_collect(state: WorkflowState) -> str:
@@ -270,8 +340,21 @@ class ResearchWorkflow:
 
         graph.add_node("revise", revise)
         graph.add_node("finalize", finish)
-        graph.add_edge(START, {"research": "parser", "confirm": "analyst", "email": "writer"}[mode])
-        graph.add_conditional_edges("parser", after_parse, ["source_collector", END])
+        retry_entry: dict[WorkflowNode, str] | None = None
+        if mode == "retry" and initial.retry_node:
+            retry_entry = {
+                "parser": "parser", "source_fetch": "source_fetch",
+                "source_collector": "source_collector", "link_check": "link_check",
+                "analyst": "analyst", "matcher": "matcher", "writer": "writer", "verifier": "verifier",
+            }
+        entry = {"research": "parser", "confirm": "analyst", "email": "writer"}.get(mode)
+        if mode == "retry" and retry_entry and initial.retry_node:
+            entry = retry_entry[initial.retry_node]
+        if entry is None:
+            raise ValueError("Invalid workflow mode")
+        graph.add_edge(START, entry)
+        graph.add_conditional_edges("parser", after_parse, ["source_fetch", END])
+        graph.add_conditional_edges("source_fetch", after_fetch, ["source_collector", END])
         graph.add_conditional_edges("source_collector", after_collect, ["link_check", END])
         graph.add_conditional_edges("link_check", after_link, ["analyst", END])
         graph.add_edge("analyst", "matcher")
@@ -289,7 +372,10 @@ class ResearchWorkflow:
                     if on_state:
                         await on_state(latest)
         except ServiceError as error:
-            latest = updated(latest, status=RunStatus.FAILED, error_code=error.code, message=error.message)
+            latest = updated(latest, status=RunStatus.FAILED, error_code=error.code,
+                             message=error.message, retry_node=active_node or latest.retry_node)
+            if on_state:
+                await on_state(latest)
             if on_progress and active_stage:
                 await on_progress(ProgressEvent(stage=active_stage, status="failed", revision_attempt=latest.revision_attempts))
         return latest

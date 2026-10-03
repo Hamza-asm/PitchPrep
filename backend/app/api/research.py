@@ -11,7 +11,7 @@ from fastapi.responses import StreamingResponse
 
 from app.schemas.api import (
     AcceptedRun, BriefDetail, BriefPage, BriefSummary, ConfirmLink, EmailEdit,
-    FeedbackInput, RegenerateEmail, SaveEmail,
+    FeedbackInput, RegenerateEmail, RetryRun, SaveEmail,
 )
 from app.schemas.research import ResearchRequest, SellerProfile
 from app.services.repository import RepositoryError, SupabaseRepository
@@ -100,6 +100,12 @@ async def stream(brief_id: UUID, request: Request,
 @router.post("/briefs/{brief_id}/confirm-link", response_model=AcceptedRun, status_code=202)
 async def confirm_link(brief_id: UUID, value: ConfirmLink, request: Request) -> AcceptedRun:
     row = await repository(request).enqueue_again(brief_id, value.expected_version, "confirm")
+    return AcceptedRun(id=row.id, status=row.status, version=row.version)
+
+
+@router.post("/briefs/{brief_id}/retry", response_model=AcceptedRun, status_code=202)
+async def retry_stage(brief_id: UUID, value: RetryRun, request: Request) -> AcceptedRun:
+    row = await repository(request).enqueue_again(brief_id, value.expected_version, "retry")
     return AcceptedRun(id=row.id, status=row.status, version=row.version)
 
 

@@ -15,10 +15,12 @@ the pasted text does not identify a company. Do not infer a name from the URL
 or the separately supplied company name. Do not complete missing facts.
 """
 
-COLLECTOR = GROUNDING + """Select short, relevant, VERBATIM excerpts from the
-supplied sources. Every quote must be an exact substring of its cited source.
-Prefer company identity, offerings, recent events and explicit needs. Exclude
-irrelevant similarly named companies. Do not rewrite quotes or choose new URLs.
+COLLECTOR = GROUNDING + """Select at most 4 concise, relevant, VERBATIM evidence
+quotes, each no longer than 700 characters, from the supplied source excerpts.
+Keep each quote to one or two sentences.
+Every quote must be an exact substring of its cited source. Prefer company
+identity, offerings, recent events and explicit needs. Exclude irrelevant
+similarly named companies. Do not rewrite quotes or choose new URLs.
 """
 
 LINK_CHECK = GROUNDING + """Check whether the supplied scraped page belongs to
@@ -40,7 +42,8 @@ source IDs, a qualified need in text, a seller_fit and a target_role. Do not
 invent seller capabilities or treat inferred needs as established facts.
 """
 
-WRITER = GROUNDING + """Write a concise brief and outreach email. Each brief
+WRITER = GROUNDING + """Write a concise brief with at most 12 claims and an
+outreach email with at most 4 short paragraphs. Each brief
 claim belongs to snapshot, trigger, need or role and cites supplied source IDs.
 Use qualified language for hypotheses and role suggestions. No personal names.
 Give EVERY brief claim, the email subject, and EACH email paragraph a unique ID.
@@ -52,7 +55,7 @@ source links will be rendered from the source records. Consider verifier feedbac
 on a revision: remove or correct unsupported units instead of repeating them.
 """
 
-VERIFIER = GROUNDING + """Check EVERY supplied unit independently, including the
+VERIFIER = GROUNDING + """Check EVERY supplied unit independently (at most 17), including the
 email subject and ALL email paragraphs, even ones with empty source_ids.
 Return exactly one verdict per unit ID. A prospect factual claim is supported
 only by supplied source excerpts. For basis=sources, include at least one exact

@@ -13,6 +13,17 @@ from app.core.errors import InvalidModelOutput, ServiceError
 from app.services.ports import Output
 from app.services.retry import retry_after_seconds, with_backoff
 
+NODE_OUTPUT_TOKEN_LIMITS = {
+    "parser": 800,
+    "source_collector": 1200,
+    "link_check": 300,
+    "analyst": 1000,
+    "matcher": 900,
+    "writer": 1400,
+    "verifier": 1200,
+    "eval_judge": 1200,
+}
+
 
 def strict_schema(schema: dict[str, Any]) -> dict[str, Any]:
     """Keep nullable fields but require every key, including nested model keys."""
@@ -81,7 +92,10 @@ class GroqService:
                                     "schema": strict_schema(schema.model_json_schema()),
                                 },
                             },
-                            max_completion_tokens=self.settings.model_max_output_tokens,
+                            max_completion_tokens=min(
+                                self.settings.model_max_output_tokens,
+                                NODE_OUTPUT_TOKEN_LIMITS[node],
+                            ),
                             temperature=0.2,
                         )
                         if not completion.choices:
@@ -91,8 +105,15 @@ class GroqService:
                         status = error.status_code
                         raise ServiceError(
                             "rate_limited" if status == 429 else "model_unavailable",
-                            "The model service is busy or unavailable. Your input has been kept; try again later.",
-                            retryable=status in (408, 409, 429) or status >= 500,
+                            (
+                                "Groq rate limit reached. Your input and completed stages are saved; "
+                                "wait for the limit to reset, then retry this stage."
+                                if status == 429 else
+                                "The model service is busy or unavailable. Your input has been kept; try again later."
+                            ),
+                            # A 429 often means the token window is still full. Do not spend more
+                            # requests retrying it automatically; let the user resume this node.
+                            retryable=status in (408, 409) or status >= 500,
                             retry_after=retry_after_seconds(error.response.headers.get("retry-after")),
                         ) from None
                     except APIConnectionError:

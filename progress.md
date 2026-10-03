@@ -138,12 +138,24 @@ Batch/CSV processing, automatic email sending, CRM integrations, user accounts, 
 | Evaluation dataset and runner | `backend/evals/` has no completed dataset, labeled verifier cases, scoring metrics, report writer, or offline evaluation tests yet. | Build the offline schemas, fixtures, metrics, runner, and documentation. |
 | Full live application verification | Persistence, progress streaming, history reopening, thin-data behavior, regeneration, feedback delivery, and LangSmith spans require an approved live research run. | Use the approved smoke run to verify the complete browser-to-provider flow. |
 | Final user-facing review | Automated browser checks cover representative states, but Hamza's product review, screen-reader pass, physical-device check, second-browser check, and Lighthouse review are still outstanding. | Review the running app and address concrete findings within PRD scope. |
-| Deployment | Render configuration is prepared, but hosting approval, access controls, hosted credentials, production origins, and publication have not been selected or approved. | Review `render.yaml`, configure secrets/origins in Render, obtain approval, then deploy. |
+| Deployment | Frontend is reachable, but the supplied backend URL returns HTTP 404 for `/api/health`, `/docs`, and `/openapi.json`; the deployed service is not serving this FastAPI app. | Set the backend service root to `backend` and start command to `uvicorn app.main:create_app --factory --host 0.0.0.0 --port $PORT`, redeploy, then recheck. |
 
 Phase 1 verification on 2026-10-03: `GET /api/health`, `/api/seller-profile`, and `/api/briefs?limit=1&offset=0` returned HTTP 200; the frontend origin returned HTTP 200. No secrets or saved record contents were printed.
 
 Phase 2 result on 2026-10-03: provider/workflow code was verified offline; configured model IDs and the Firecrawl endpoint were read without secrets; `46 passed` backend tests. No live provider request was made because the required request budget was not specified.
 
+Deployment verification on 2026-10-03: `https://pitchprep-1.onrender.com` returned HTTP 200, but `https://pitchprep-backend.onrender.com` returned HTTP 404 for all expected FastAPI paths. Deployment is not complete until the backend service is corrected and redeployed.
+
 The completion checklist above remains intentionally unchecked for requirements that depend on live verification or deployment; those requirements are represented here with their blocking reason rather than being marked complete from mocked results.
 
 Update this file after each phase with the implementation changes, checks actually run, observed results, unresolved issues, and next action. Do not mark live verification or deployment complete from mocked results.
+
+## Retry and token usage update
+
+- [x] Failed workflow nodes are saved as checkpoints; retry resumes at that node and reuses completed outputs and sources.
+- [x] Firecrawl source fetching is separated from model-based evidence extraction, preventing later Groq failures from scraping again.
+- [x] “Edit company details” opens the form without starting work. A new full run begins only after explicit form submission.
+- [x] No-source pauses can retry source collection alone.
+- [x] Reduced model context and output budgets: parser input 4,000 characters, collector excerpts 1,200 characters, four verified quotes of at most 700 characters, fewer news snippets, and per-node output-token caps. Groq 429 responses are not automatically retried.
+- [x] Supabase development RPC and job-kind constraint updated to permit checkpoint retries; database schema/function definition verified via MCP.
+- [ ] Frontend/backend software checks and live provider behavior remain unverified in this update. No Groq or Firecrawl calls were made.

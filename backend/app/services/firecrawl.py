@@ -41,7 +41,8 @@ class FirecrawlService:
                     raise ServiceError(
                         "rate_limited" if status == 429 else "source_unavailable",
                         "The source service is busy or this page could not be collected.",
-                        retryable=status in (408, 429) or status >= 500,
+                        # Do not spend another Firecrawl request immediately after a rate limit.
+                        retryable=status == 408 or status >= 500,
                         retry_after=retry_after_seconds(response.headers.get("retry-after")),
                     )
                 try:

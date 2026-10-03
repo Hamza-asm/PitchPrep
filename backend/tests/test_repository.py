@@ -27,6 +27,24 @@ async def test_backend_database_headers_and_base_url(settings, monkeypatch):
         await repo.aclose()
 
 
+async def test_backend_database_normalizes_rest_api_url(settings, monkeypatch):
+    captured = {}
+    original = httpx.AsyncClient
+
+    def factory(**kwargs):
+        captured.update(kwargs)
+        kwargs["transport"] = httpx.MockTransport(lambda req: httpx.Response(200, json=[]))
+        return original(**kwargs)
+
+    monkeypatch.setattr(httpx, "AsyncClient", factory)
+    repo = SupabaseRepository(settings.model_copy(update={"supabase_url": "https://supabase.example/rest/v1/"}))
+    try:
+        await repo.get_seller()
+        assert captured["base_url"] == "https://supabase.example/rest/v1/"
+    finally:
+        await repo.aclose()
+
+
 @pytest.mark.parametrize("status", [401, 403, 500])
 async def test_repository_does_not_leak_provider_errors(settings, status):
     async with httpx.AsyncClient(base_url="https://db.example/", transport=httpx.MockTransport(lambda req: httpx.Response(status, json={"message": "private detail"}))) as client:

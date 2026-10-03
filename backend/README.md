@@ -4,8 +4,8 @@
 
 The backend includes the research workflow, Supabase persistence, a durable job
 queue, and API routes for seller setup, generation, history, progress streaming,
-link confirmation, email editing/regeneration, and feedback. The frontend and
-evaluation suite are the next milestones.
+link confirmation, failed-stage retries, email editing/regeneration, and feedback.
+The evaluation suite is the next milestone.
 
 See [API contracts](../docs/API.md) and [database design](../docs/DATABASE.md).
 
@@ -50,8 +50,12 @@ Optional environment settings and defaults:
 | `RETRY_BASE_SECONDS` | `2` |
 | `RETRY_MAX_SECONDS` | `30` |
 | `PROVIDER_TIMEOUT_SECONDS` | `45` |
-| `MODEL_MAX_OUTPUT_TOKENS` | `4096` |
-| `NEWS_RESULT_LIMIT` | `3` |
+| `MODEL_MAX_OUTPUT_TOKENS` | `2048` maximum; per-node hard caps range from 300 to 1400 |
+| `NEWS_RESULT_LIMIT` | `2` |
+| `PARSER_INPUT_CHARS` | `4000` characters sent to the Parser; full user text remains saved as evidence |
+| `COLLECTOR_EXCERPT_CHARS` | `1200` characters per source sent to the Source Collector/Link check |
+| `EVIDENCE_QUOTE_LIMIT` | `4` verified excerpts shared with later model stages |
+| `EVIDENCE_QUOTE_CHARS` | `700` characters maximum per retained quote |
 | `SOURCE_MAX_CHARS` | `8000` per web source |
 | `WORKER_POLL_SECONDS` | `2` |
 | `WORKER_LEASE_SECONDS` | `120` |
@@ -90,6 +94,14 @@ failed and are not automatically retried. Link confirmation resumes at Analyst.
 Email regeneration uses saved sources and reruns Writer/Verifier only, keeping
 the verified brief claims intact. Manual email edits are stored separately from
 the verified generated result and carry no verification guarantee.
+
+Failed workflow stages can be resumed from the saved node checkpoint. Source
+fetching and evidence extraction are separate stages, so a later model failure
+does not repeat Firecrawl. “Edit company details” only opens the editable form; a
+new run starts only after the user submits it. Groq 429 responses are not retried
+automatically. Per-stage completion-token caps and compact evidence payloads
+reduce prompt and output usage; they cannot guarantee a request fits a provider
+rate window in every case.
 
 Feedback is saved first. A background delivery loop sends numeric scores to the
 corresponding successful LangSmith trace; comments remain in Supabase. Delivery

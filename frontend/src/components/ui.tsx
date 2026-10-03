@@ -41,6 +41,10 @@ export function Notice({ children, kind = "error" }: { children: ReactNode; kind
   return <div className={`notice notice-${kind}`} role={kind === "error" ? "alert" : "status"}><Icon name="alert" /><div>{children}</div></div>;
 }
 
+export function SharedDemoNotice() {
+  return <aside className="demo-notice wrap" aria-label="Shared demo workspace notice"><Icon name="alert" /><div><strong>PitchPrep demo workspace</strong><p>Sign-up and login are not available yet. This deployment is shared, so the seller profile, research briefs, pasted details, and email edits can be seen by everyone using it. Please do not enter confidential information.</p></div></aside>;
+}
+
 export function Skeleton({ label = "Loading your workspace" }: { label?: string }) {
   return <div className="loading-panel" role="status" aria-label={label}><div className="skeleton skeleton-title" /><div className="skeleton" /><div className="skeleton" /><div className="skeleton skeleton-block" /><span className="sr-only">{label}</span></div>;
 }

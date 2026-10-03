@@ -7,7 +7,7 @@ from uuid import UUID
 from pydantic import Field
 
 from app.schemas.research import (
-    FinalBrief, ProgressEvent, ResearchRequest, Schema, SellerProfile, WorkflowState,
+    FinalBrief, ProgressEvent, ResearchRequest, Schema, SellerProfile, WorkflowNode, WorkflowState,
 )
 
 JobStatus = Literal["queued", "running", "needs_input", "needs_confirmation", "completed", "failed"]
@@ -32,6 +32,10 @@ class ConfirmLink(Schema):
     expected_version: int = Field(ge=0)
 
 
+class RetryRun(Schema):
+    expected_version: int = Field(ge=0)
+
+
 class FeedbackInput(Schema):
     rating: Literal[-1, 1]
     comment: str = Field(default="", max_length=2000)
@@ -47,7 +51,7 @@ class BriefRecord(Schema):
     result: FinalBrief | None = None
     email_edit: EmailEdit | None = None
     version: int = 0
-    job_kind: Literal["research", "confirm", "email"] = "research"
+    job_kind: Literal["research", "confirm", "email", "retry"] = "research"
     tone: str | None = None
     lease_token: UUID | None = None
     lease_expires_at: datetime | None = None
@@ -69,12 +73,23 @@ class BriefDetail(Schema):
     version: int
     error_code: str | None
     message: str | None
+    retry_node: WorkflowNode | None = None
     created_at: datetime
     updated_at: datetime
 
     @classmethod
     def from_record(cls, record: BriefRecord) -> "BriefDetail":
-        return cls.model_validate(record.model_dump(include=set(cls.model_fields)))
+        data = record.model_dump(include=set(cls.model_fields))
+        retryable_input = (
+            record.status == "needs_input" and record.state
+            and record.state.retry_node == "source_fetch"
+        )
+        data["retry_node"] = (
+            record.state.retry_node
+            if record.state and (record.status == "failed" or retryable_input)
+            else None
+        )
+        return cls.model_validate(data)
 
 
 class BriefSummary(Schema):

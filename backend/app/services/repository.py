@@ -20,8 +20,11 @@ class RepositoryError(ServiceError):
 class SupabaseRepository:
     def __init__(self, settings: Settings, client: httpx.AsyncClient | None = None) -> None:
         key = settings.supabase_service_role_key.get_secret_value()
+        base_url = str(settings.supabase_url).rstrip("/")
+        if base_url.endswith("/rest/v1"):
+            base_url = base_url[:-len("/rest/v1")]
         self.client = client or httpx.AsyncClient(
-            base_url=str(settings.supabase_url).rstrip("/") + "/rest/v1/",
+            base_url=base_url + "/rest/v1/",
             headers={"apikey": key, "Authorization": f"Bearer {key}"},
             timeout=15, follow_redirects=False,
         )

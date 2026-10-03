@@ -139,7 +139,7 @@ class Finding(CitedText):
 
 
 class Analysis(Schema):
-    findings: list[Finding] = Field(max_length=16)
+    findings: list[Finding] = Field(max_length=8)
 
 
 class Opportunity(CitedText):
@@ -148,7 +148,7 @@ class Opportunity(CitedText):
 
 
 class Matches(Schema):
-    opportunities: list[Opportunity] = Field(max_length=8)
+    opportunities: list[Opportunity] = Field(max_length=4)
 
 
 class Claim(CitedText):
@@ -164,11 +164,11 @@ class EmailSegment(Schema):
 
 class EmailDraft(Schema):
     subject: EmailSegment
-    paragraphs: list[EmailSegment] = Field(min_length=1, max_length=8)
+    paragraphs: list[EmailSegment] = Field(min_length=1, max_length=4)
 
 
 class Draft(Schema):
-    claims: list[Claim] = Field(max_length=24)
+    claims: list[Claim] = Field(max_length=12)
     email: EmailDraft
 
     @model_validator(mode="after")
@@ -191,7 +191,7 @@ class Verdict(Schema):
 
 
 class Verification(Schema):
-    verdicts: list[Verdict] = Field(max_length=40)
+    verdicts: list[Verdict] = Field(max_length=17)
 
 
 class VerifiedClaim(Claim):
@@ -237,6 +237,12 @@ class RunStatus(StrEnum):
     FAILED = "failed"
 
 
+WorkflowNode = Literal[
+    "parser", "source_fetch", "source_collector", "link_check",
+    "analyst", "matcher", "writer", "verifier",
+]
+
+
 class ProgressEvent(Schema):
     stage: Stage
     status: Literal["active", "complete", "failed"]
@@ -256,6 +262,7 @@ class WorkflowState(Schema):
     verification: Verification | None = None
     result: FinalBrief | None = None
     revision_attempts: int = Field(default=0, ge=0, le=2)
+    retry_node: WorkflowNode | None = None
     limited_data: bool = False
     limitations: list[str] = Field(default_factory=list)
     error_code: str | None = None

@@ -1,8 +1,9 @@
 # PitchPrep persistence
 
 Applied through Supabase MCP to development project `wrkzisamhwqtqrotyqlj`.
-The remote migration history records these changes; no local migration files
-were created, following `AGENTS.md`.
+The initial schema is recorded in Supabase migration history. The later retry
+RPC/constraint update was applied directly through MCP `execute_sql`; no local
+migration file was created, following `AGENTS.md`.
 
 ## Tables
 
@@ -52,9 +53,11 @@ It rejects missing claim source references; any failure rolls back the whole
 write. Successful-result trace IDs are retained independently from later failed
 attempts so feedback stays attached to the result being reviewed.
 
-`pitchprep_enqueue_again` accepts only link confirmation or email regeneration
-from eligible states, with a matching version. `pitchprep_save_email` uses the
-same optimistic version check to prevent stale edits.
+`pitchprep_enqueue_again` accepts link confirmation, email regeneration, or a
+checkpoint retry from eligible states, with a matching version. A retry requires
+a supported node name in the saved workflow state and preserves prior progress.
+`pitchprep_save_email` uses the same optimistic version check to prevent stale
+edits.
 
 ## Applied migrations
 
