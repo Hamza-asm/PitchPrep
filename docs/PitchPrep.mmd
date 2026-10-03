@@ -1,0 +1,37 @@
+---
+config:
+  theme: neutral
+  fontFamily: '''Merriweather Variable'', serif'
+  themeVariables:
+    fontFamily: '''Merriweather Variable'', serif'
+  layout: dagre
+---
+flowchart TB
+    A["User Input<br>Company name, Website or social link, Pasted details<br>Next.js"] --> B["API Layer<br>FastAPI + Pydantic<br>Validate input, stream progress"]
+    B --> C["1. Input Parser<br>GPT-OSS 20B via Groq<br>Extract fields from pasted text"]
+    C --> D["2. Source Collector<br>Firecrawl: scrape pages and search news<br>GPT-OSS 20B: extract sourced information<br>Preserve original pasted text"]
+    D --> E{"Link matches<br>the company?"}
+    E -- "No" --> F["Ask user to confirm link"]
+    F --> A
+    E -- "Yes" --> G["3. Analyst<br>GPT-OSS 120B via Groq<br>Trigger events and potential needs"]
+    G --> H["4. Matcher<br>GPT-OSS 120B via Groq<br>Map to seller product, suggest target roles"]
+    H --> I["5. Writer<br>GPT-OSS 120B via Groq<br>Sourced brief and email draft"]
+    I --> J{"6. Verifier<br>Qwen 3.8 27B via Groq<br>Check claims against supplied evidence"}
+    D -. "Source excerpts and pasted text" .-> J
+
+    J -- "Unsupported claims, retries remaining" --> R["Revise using verifier feedback<br>Maximum 2 revision attempts"]
+    R --> I
+    J -- "Still unsupported after retry limit" --> S["Remove unsupported claims<br>Flag evidence limitations"]
+    J -- "Supported" --> K["Final Brief<br>Source verification status and source links"]
+    S --> K
+    K --> L["Review and Edit<br>Edit email, regenerate, thumbs up or down"]
+
+    O["Seller Profile Setup<br>What we sell, ideal customer"] --> P[("Seller Profile<br>Supabase")]
+    P -. "Seller context" .-> H
+
+    L --> M[("Supabase<br>Briefs, history, feedback")]
+    B -. "Workflow traces" .-> N["LangSmith<br>Model calls, tool calls, latency, errors"]
+    L -. "User feedback" .-> N
+
+    T["Evaluation Dataset<br>Source excerpts and pasted text<br>Known supported and unsupported claims<br>Expected results"] --> U["Evaluation Runner<br>Code checks + Qwen 3.8 27B judge<br>Verifier precision and recall against labels<br>Manual review of selected examples"]
+    U -. "Scores and experiment results" .-> N
