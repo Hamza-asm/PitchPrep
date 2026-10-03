@@ -228,8 +228,17 @@ class GroqService:
             )
             try:
                 return schema.model_validate_json(content, context=validation_context)
-            except ValidationError:
+            except ValidationError as error:
                 # Never echo provider responses or validation inputs into logs.
-                logger.warning("Groq output failed local schema validation node=%s attempt=%s", node, schema_attempt + 1)
+                issues = ",".join(
+                    f"{'.'.join(str(part) for part in detail['loc'])}:{detail['type']}"
+                    for detail in error.errors()
+                )
+                logger.warning(
+                    "Groq output failed local schema validation node=%s attempt=%s issues=%s",
+                    node,
+                    schema_attempt + 1,
+                    issues or "unknown",
+                )
                 continue
         raise InvalidModelOutput()
