@@ -117,6 +117,10 @@ new run starts only after the user submits it. Groq 429 responses are not retrie
 automatically. Per-stage completion-token caps and compact evidence payloads
 reduce prompt and output usage; they cannot guarantee a request fits a provider
 rate window in every case.
+Retries of a failed Writer revision retain the previous draft and Verifier
+feedback. Groq request-failure logs include the `retry-after` duration when the
+provider sends that header; the UI's 90-second retry timer is only a minimum
+cooldown and does not indicate quota availability.
 
 Feedback is saved first. A background delivery loop sends numeric scores to the
 corresponding successful LangSmith trace; comments remain in Supabase. Delivery

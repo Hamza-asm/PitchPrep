@@ -125,6 +125,37 @@ async def test_two_revisions_then_prunes_brief_and_email(settings, missing):
     assert result.result.limited_data
 
 
+async def test_retry_of_failed_writer_revision_keeps_verifier_feedback(settings):
+    class RateLimitedRevision(FakeModel):
+        def __init__(self):
+            super().__init__(unsupported=True)
+            self.writer_attempts = 0
+            self.retry_payload = None
+
+        async def generate(self, **kwargs):
+            if kwargs["node"] == "writer":
+                self.writer_attempts += 1
+                if self.writer_attempts == 2:
+                    raise ServiceError("rate_limited", "Synthetic limit")
+                if self.writer_attempts == 3:
+                    self.retry_payload = kwargs["payload"]
+            return await super().generate(**kwargs)
+
+    model = RateLimitedRevision()
+    workflow = ResearchWorkflow(settings, model, FakeWeb())
+    failed = await workflow.run(request(), SELLER)
+    assert failed.status == "failed"
+    assert failed.retry_node == "writer"
+    assert failed.revision_attempts == 1
+    assert failed.draft is not None and failed.verification is not None
+
+    resumed = await workflow.run(request(), SELLER, saved_state=failed, mode="retry")
+    assert resumed.status == "completed"
+    assert model.retry_payload["revision_attempt"] == 1
+    assert model.retry_payload["previous_draft"] is not None
+    assert model.retry_payload["verifier_feedback"] is not None
+
+
 async def test_missing_name_stops_before_collection(settings):
     web = FakeWeb()
     result = await ResearchWorkflow(settings, FakeModel(missing_name=True), web).run(request(pasted_text="Open weekdays"), SELLER)

@@ -123,7 +123,7 @@ async def test_groq_rate_limit_attempt_cap(settings):
 
     def handle(req):
         calls.append(req)
-        return httpx.Response(429, json={"error": {"message": "private-provider-detail"}})
+        return httpx.Response(429, headers={"retry-after": "75"}, json={"error": {"message": "private-provider-detail"}})
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as http:
         client = AsyncGroq(api_key="synthetic", base_url="https://groq.example/", max_retries=0, http_client=http)
@@ -131,4 +131,5 @@ async def test_groq_rate_limit_attempt_cap(settings):
             await GroqService(settings, client).generate(node="link_check", schema=LinkAssessment, instructions="Test", payload={})
     assert len(calls) == 1
     assert caught.value.code == "rate_limited"
+    assert caught.value.retry_after == 75
     assert "private-provider-detail" not in str(caught.value)

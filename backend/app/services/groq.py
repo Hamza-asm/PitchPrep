@@ -174,14 +174,16 @@ class GroqService:
                             provider_param = provider_error.get("param")
                         except (ValueError, AttributeError):
                             provider_code = provider_type = provider_param = None
+                        retry_after = retry_after_seconds(error.response.headers.get("retry-after"))
                         logger.warning(
-                            "Groq request failed node=%s status=%s request_id=%s code=%s type=%s param=%s",
+                            "Groq request failed node=%s status=%s request_id=%s code=%s type=%s param=%s retry_after_seconds=%s",
                             node,
                             status,
                             request_id or "unavailable",
                             provider_code or "unavailable",
                             provider_type or "unavailable",
                             provider_param or "unavailable",
+                            retry_after if retry_after is not None else "unavailable",
                         )
                         if status == 400:
                             code = "model_request_rejected"
@@ -213,7 +215,7 @@ class GroqService:
                             # A 429 often means the token window is still full. Do not spend more
                             # requests retrying it automatically; let the user resume this node.
                             retryable=status in (408, 409) or status >= 500,
-                            retry_after=retry_after_seconds(error.response.headers.get("retry-after")),
+                            retry_after=retry_after,
                         ) from None
                     except APIConnectionError:
                         logger.warning("Groq connection failed node=%s", node)

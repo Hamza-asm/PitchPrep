@@ -247,6 +247,11 @@ class ResearchWorkflow:
             "matches": None, "draft": None, "verification": None,
         }
         changes = {key: cleared[key] for key in downstream[node]}
+        if node == "writer" and state.revision_attempts > 0:
+            # A failed Writer revision still needs the last draft and Verifier
+            # feedback. Both were completed before this revision was attempted.
+            changes.pop("draft")
+            changes.pop("verification")
         keep_previous_result = state.email_tone is not None and state.result is not None
         changes.update(
             status=RunStatus.RUNNING,
