@@ -104,10 +104,13 @@ class GroqService:
         payload: dict[str, Any],
         validation_context: dict[str, Any] | None = None,
     ) -> Output:
+        validation_issues = ""
         for schema_attempt in range(self.settings.schema_max_attempts):
             correction = (
-                "\nYour previous response failed schema validation. Return all required fields, "
-                "valid supplied source IDs, and no extra fields."
+                "\nYour previous response failed local schema validation at: "
+                f"{validation_issues}. Correct these fields. Return all required fields, "
+                "valid supplied source IDs, and no extra fields. Keep within the "
+                "requested item limits and give every unit a unique ID."
                 if schema_attempt else ""
             )
 
@@ -230,15 +233,15 @@ class GroqService:
                 return schema.model_validate_json(content, context=validation_context)
             except ValidationError as error:
                 # Never echo provider responses or validation inputs into logs.
-                issues = ",".join(
+                validation_issues = ",".join(
                     f"{'.'.join(str(part) for part in detail['loc'])}:{detail['type']}"
                     for detail in error.errors()
-                )
+                )[:500] or "unknown"
                 logger.warning(
                     "Groq output failed local schema validation node=%s attempt=%s issues=%s",
                     node,
                     schema_attempt + 1,
-                    issues or "unknown",
+                    validation_issues,
                 )
                 continue
         raise InvalidModelOutput()

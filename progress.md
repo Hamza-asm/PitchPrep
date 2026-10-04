@@ -168,3 +168,11 @@ Update this file after each phase with the implementation changes, checks actual
 - [x] Frontend `npm run lint` and `npm run build` pass for the countdown and retry UI update.
 - [x] Focused backend software checks for retry/schema/token changes passed; no Groq or Firecrawl calls were made by the test suite.
 - [x] Older saved workflow states retain their original list-size compatibility limits; separate constrained schemas keep new model output budgets in place.
+
+## 2026-10-04 Writer validation follow-up
+
+A manual deployed run for Linear reached Writing and failed with `invalid_model_output` on repeated stage retries. The screenshot establishes that earlier stages completed, but does not identify which Writer fields failed validation. The deployed backend's allowlisted `Groq usage node=writer` and `Groq output failed local schema validation node=writer` log lines are needed for the exact cause; no additional live provider requests were made during this follow-up.
+
+Locally, Groq schema retries now include the failed field paths and error types in the correction instruction, and the public error text distinguishes schema validation from output truncation. Offline tests were updated for the existing no-retry-on-429 behavior and the bounded Writer revision loop. `python -m pytest -q` in `backend/` passed: **49 passed**. These changes remain in the working tree and are not deployed.
+
+The provided Render excerpt contained startup and HTTP access lines only. Application logging is now explicitly routed to stdout, with safe per-stage run ID, node, status, and error-code records. `python -m pytest -q` passed after this addition: **50 passed**. The deployed failure still requires runtime logs from a run after these local changes are deployed; no new live run was made here.

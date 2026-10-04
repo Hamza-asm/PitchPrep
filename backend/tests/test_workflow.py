@@ -81,19 +81,22 @@ def test_analysis_accepts_legacy_checkpoint_with_nine_findings():
     assert len(analysis.findings) == 9
 
 
-async def test_full_graph_and_progress(settings):
+async def test_full_graph_and_progress(settings, caplog):
     model, web, events = FakeModel(), FakeWeb(), []
 
     async def progress(event):
         events.append(event)
 
-    result = await ResearchWorkflow(settings, model, web).run(request(pasted_text="Fixture Co provides repair services."), SELLER, on_progress=progress)
+    with caplog.at_level("INFO", logger="app.workflows.research"):
+        result = await ResearchWorkflow(settings, model, web).run(request(pasted_text="Fixture Co provides repair services."), SELLER, on_progress=progress)
     assert result.status == "completed"
     assert result.result.verification.removed_units == 0
     assert result.result.claims[0].verification_status == "verified"
     assert web.urls == ["https://fixture.example/exact-page"]
     assert model.calls["writer"] == model.calls["verifier"] == 1
     assert {event.stage.value for event in events} == {"parsing", "collecting", "analyzing", "matching", "writing", "verifying"}
+    assert "node=writer" in caplog.text
+    assert "Fixture Co" not in caplog.text
 
 
 @pytest.mark.parametrize("missing", [False, True])

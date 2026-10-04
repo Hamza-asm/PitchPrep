@@ -21,5 +21,5 @@ class InvalidModelOutput(ServiceError):
     def __init__(self) -> None:
         super().__init__(
             "invalid_model_output",
-            "A model returned an incomplete response. Your input has been kept; try again later.",
+            "The model response did not pass validation. Your input and completed stages are saved; retry this stage later.",
         )

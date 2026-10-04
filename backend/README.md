@@ -94,6 +94,11 @@ quality and provider compatibility need a separately authorized smoke test.
 
 Groq HTTP failures log only the workflow node, HTTP status, and provider request
 ID; prompts, response bodies, credentials, and pasted data are not logged.
+Application logs are written to stdout for hosted runtime logs. Each research
+stage records its start and finish with a run ID, node, and status; failures
+record a safe error code. Groq usage and local schema failures record token
+counts, finish reason, and validation field paths/error types, without response
+content. Use the runtime log view after a run, rather than deployment build logs.
 
 Runs and progress are saved outside the browser request. The database permits
 one active run across workers. A lost lease cancels work; interrupted runs become

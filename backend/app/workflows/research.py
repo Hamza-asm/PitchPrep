@@ -1,5 +1,6 @@
 """Fixed research graph, including link confirmation and a capped Writer loop."""
 
+import logging
 import re
 from collections.abc import Awaitable, Callable
 from contextlib import nullcontext
@@ -39,6 +40,7 @@ from app.workflows import prompts
 from app.workflows.verification import check_verdicts, finalize, quote_exists
 
 MAX_WRITER_REVISIONS = 2
+logger = logging.getLogger(__name__)
 ProgressCallback = Callable[[ProgressEvent], Awaitable[None]]
 StateCallback = Callable[[WorkflowState], Awaitable[None]]
 
@@ -280,6 +282,7 @@ class ResearchWorkflow:
                 nonlocal active_node, active_stage, latest
                 active_node = name
                 active_stage = stage
+                logger.info("Research stage started run_id=%s node=%s revision=%s", trace_id, name, state.revision_attempts)
                 ready = updated(state, retry_node=name)
                 latest = ready
                 if on_state:
@@ -295,6 +298,7 @@ class ResearchWorkflow:
                 )
                 if on_progress:
                     await on_progress(ProgressEvent(stage=stage, status="complete", revision_attempt=result.revision_attempts))
+                logger.info("Research stage finished run_id=%s node=%s status=%s", trace_id, name, result.status.value)
                 return result
             return wrapped
 
@@ -376,6 +380,7 @@ class ResearchWorkflow:
                     if on_state:
                         await on_state(latest)
         except ServiceError as error:
+            logger.warning("Research stage failed run_id=%s node=%s code=%s", trace_id, active_node, error.code)
             latest = updated(latest, status=RunStatus.FAILED, error_code=error.code,
                              message=error.message, retry_node=active_node or latest.retry_node)
             if on_state:

@@ -149,6 +149,7 @@ async def test_confirm_and_regenerate_do_not_recollect(settings, repo):
         assert (await client.post(f"/api/briefs/{row.id}/confirm-link", json={"confirmed": True, "expected_version": row.version})).status_code == 409
         await worker.run_once()
         assert row.status == "completed"
+        assert model.calls["writer"] == 3
         claims = row.result.claims
         edit = await client.put(f"/api/briefs/{row.id}/email", json={"subject": "My subject", "body": "My edited message", "expected_version": row.version})
         assert edit.status_code == 200
@@ -163,7 +164,7 @@ async def test_confirm_and_regenerate_do_not_recollect(settings, repo):
         assert row.result.claims == claims
         assert len(web.urls) == 1
         assert model.calls["analyst"] == 1
-        assert model.calls["writer"] == 2
+        assert model.calls["writer"] == 6
 
 
 async def test_validation_and_not_found_do_not_reflect_input(settings, repo):

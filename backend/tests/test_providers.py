@@ -49,7 +49,7 @@ async def test_firecrawl_fixed_scrape_and_news_only(settings):
     assert len(sent) == 2
 
 
-@pytest.mark.parametrize("status,expected", [(401, 1), (429, 2), (500, 2)])
+@pytest.mark.parametrize("status,expected", [(401, 1), (429, 1), (500, 2)])
 async def test_firecrawl_retries_are_bounded(settings, status, expected):
     calls = []
 
@@ -114,6 +114,8 @@ async def test_groq_validates_output_and_caps_schema_retries(settings, recover):
     assert len(sent) == 2
     assert sent[0]["model"] == "test-link_check"
     assert sent[0]["response_format"]["json_schema"]["strict"]
+    assert "matches:missing" in sent[1]["messages"][0]["content"]
+    assert "reason:missing" in sent[1]["messages"][0]["content"]
 
 
 async def test_groq_rate_limit_attempt_cap(settings):
@@ -127,6 +129,6 @@ async def test_groq_rate_limit_attempt_cap(settings):
         client = AsyncGroq(api_key="synthetic", base_url="https://groq.example/", max_retries=0, http_client=http)
         with pytest.raises(ServiceError) as caught:
             await GroqService(settings, client).generate(node="link_check", schema=LinkAssessment, instructions="Test", payload={})
-    assert len(calls) == 2
+    assert len(calls) == 1
     assert caught.value.code == "rate_limited"
     assert "private-provider-detail" not in str(caught.value)

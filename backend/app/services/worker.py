@@ -88,7 +88,8 @@ class ResearchWorker:
             await asyncio.gather(job, pulse, return_exceptions=True)
             await self._mark_interrupted(record.id, token, latest, "run_interrupted")
             raise
-        except Exception:
+        except Exception as error:
+            logger.warning("Research run interrupted run_id=%s error_type=%s", token, type(error).__name__)
             job.cancel()
             pulse.cancel()
             await asyncio.gather(job, pulse, return_exceptions=True)

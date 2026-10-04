@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from app.api.health import router as health_router
 from app.api.research import router as research_router
 from app.core.config import Settings, get_settings
+from app.core.logging import configure_app_logging
 from app.services.firecrawl import FirecrawlService
 from app.services.feedback import FeedbackDelivery
 from app.services.groq import GroqService
@@ -27,6 +28,7 @@ def create_app(settings: Settings | None = None, *, repository: SupabaseReposito
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        configure_app_logging()
         repo = repository or SupabaseRepository(config)
         model = web = tracer = None
         try:
