@@ -2,7 +2,7 @@
 
 Last updated: **2026-10-03**
 
-The core application is implemented: backend research, persistence, API, landing page, and workflow screens. The main remaining work is the evaluation suite, controlled live integration verification, and deployment.
+The core application is implemented and a deployed Linear research run has reached a Ready brief. The main remaining work is the evaluation suite, targeted live checks of history/feedback/LangSmith, and final deployment review.
 
 This tracker follows [docs/PRD.md](docs/PRD.md). **Implemented** means the code exists; **verified** identifies the checks already performed. Offline tests and mocked browser journeys do not establish live provider compatibility or research quality.
 
@@ -11,13 +11,13 @@ This tracker follows [docs/PRD.md](docs/PRD.md). **Implemented** means the code 
 | PRD phase | Implementation status | Remaining work |
 | --- | --- | --- |
 | 1. Schemas, configuration, backend skeleton | Implemented; local integration verified | None for this phase |
-| 2. Workflow nodes and provider integrations | Implemented; offline verified | Deliberate live Groq/Firecrawl smoke test and output-quality review |
-| 3. Supabase persistence | Applied to the development project; local and deployed API transport verified | Verify a complete live research run and durable result persistence |
-| 4. API routes and streaming | Implemented; offline coverage | Exercise the browser-to-backend-to-database flow with a real run |
+| 2. Workflow nodes and provider integrations | Implemented; one deployed Linear run reached a Ready brief | Review citation quality and additional input types deliberately |
+| 3. Supabase persistence | Applied to the development project; Ready Linear brief appears in history | Verify reopening after refresh and durable edits/feedback |
+| 4. API routes and streaming | Implemented; live retry and stream requests observed | Verify reconnect and final history behavior in the deployed flow |
 | 5. Landing page | Implemented; frontend checks passed | Final user review and any requested polish |
 | 6. Workflow screens and brief view | Implemented; mocked browser checks passed | Live integration, physical-device and accessibility review |
 | 7. Evaluation dataset, runner, LangSmith wiring | Tracing/feedback wiring implemented; evaluation suite not implemented | Dataset, labeled verifier cases, metrics, runner, results, and live trace confirmation |
-| 8. Deployment configuration and README | Render configuration deployed; basic frontend/backend routes verified | Complete live research verification, hosted access review, and operational sign-off |
+| 8. Deployment configuration and README | Render deployment served a completed Linear brief | Hosted access review and operational sign-off |
 
 ## Completed work
 
@@ -140,11 +140,11 @@ Batch/CSV processing, automatic email sending, CRM integrations, user accounts, 
 
 | Work item | Why it remains incomplete | Next action |
 | --- | --- | --- |
-| Live Groq and Firecrawl compatibility smoke test | Live provider calls can consume quota and are explicitly gated on Hamza's approved request budget. Offline mocks cannot certify model IDs, provider response modes, or research quality. | Approve a bounded live request budget, then run one end-to-end case. |
+| Live provider and output-quality review | A deployed Linear run completed after saved-stage retries; citations and model judgments have not been manually audited. | Inspect its sources and claims, then use another case only if a specific risk remains. |
 | Evaluation dataset and runner | `backend/evals/` has no completed dataset, labeled verifier cases, scoring metrics, report writer, or offline evaluation tests yet. | Build the offline schemas, fixtures, metrics, runner, and documentation. |
-| Full live application verification | Persistence, progress streaming, history reopening, thin-data behavior, regeneration, feedback delivery, and LangSmith spans require an approved live research run. | Use the approved smoke run to verify the complete browser-to-provider flow. |
+| Full live application verification | The Ready Linear brief, limited-data notice, source badges, and history entry are visible; reopening after refresh, regeneration, feedback delivery, and LangSmith spans remain unconfirmed. | Check those paths on the saved brief without starting fresh research. |
 | Final user-facing review | Automated browser checks cover representative states, but Hamza's product review, screen-reader pass, physical-device check, second-browser check, and Lighthouse review are still outstanding. | Review the running app and address concrete findings within PRD scope. |
-| Deployment | Render frontend and backend are reachable, and basic backend routes return HTTP 200; the complete hosted research flow is not yet verified. | Run an approved live smoke test, then verify SSE, persistence, feedback, and worker behavior. |
+| Deployment | Render frontend and backend served a completed Linear brief; hosted access and operational review remain. | Verify saved history and access controls, then document sign-off. |
 
 Phase 1 verification on 2026-10-03: `GET /api/health`, `/api/seller-profile`, and `/api/briefs?limit=1&offset=0` returned HTTP 200; the frontend origin returned HTTP 200. No secrets or saved record contents were printed.
 
@@ -180,3 +180,5 @@ The provided Render excerpt contained startup and HTTP access lines only. Applic
 The subsequent runtime log identified the Linear Writer failure precisely: two Groq completions ended normally (`finish_reason=stop`), but `claims.3.source_ids:too_short` failed local validation both times. The Writer now discards an uncited model claim before building the strict persisted draft, records an evidence-limitation note, and marks the brief as limited data. All retained claims still require source IDs and Verifier approval. Full offline backend suite: **51 passed**. A new hosted retry after deployment is still needed to confirm the live result.
 
 The next hosted retry passed Writing and reached Verifying, then encountered a Groq rate limit on a later Writer revision. The 90-second UI cooldown does not establish when Groq's quota resets. A failed Writer revision now retains its prior draft and Verifier feedback when resumed, and Groq 429 logs include a numeric `retry_after_seconds` header value when available. Full offline backend suite: **52 passed**. No additional live provider calls were made during this code update.
+
+Hamza's subsequent deployed screenshot shows the Linear brief in **Ready** status with two visible verified, source-linked snapshot claims, an email draft, a limited-data notice, evidence-limitations text, and a Ready history entry. This confirms a completed live UI path after the saved-stage retries. The screenshot does not by itself verify citation accuracy, persistence after refresh, email regeneration, feedback delivery, or LangSmith traces. No new test command or provider request was run while recording this result.
