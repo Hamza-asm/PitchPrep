@@ -87,6 +87,9 @@ continue with pasted text or news, with a limited-data flag. Every brief claim,
 email subject, and paragraph gets a verification decision. Missing decisions,
 invalid citations, and fabricated evidence quotes fail verification. After at
 most two Writer revisions, unsupported units are removed and flagged.
+Writer claims returned with no source IDs are discarded before verification,
+and the brief records an evidence limitation. Retained claims still require
+valid source IDs and a supported Verifier decision.
 
 The model still performs semantic verification; matching an evidence quote is
 an additional structural check, not proof of the model's judgment. Live output

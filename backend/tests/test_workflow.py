@@ -27,12 +27,13 @@ class FakeWeb:
 
 
 class FakeModel:
-    def __init__(self, *, unsupported=False, missing_name=False, mismatch=False, missing_verdict=False):
+    def __init__(self, *, unsupported=False, missing_name=False, mismatch=False, missing_verdict=False, uncited=False):
         self.calls = Counter()
         self.unsupported = unsupported
         self.missing_name = missing_name
         self.mismatch = mismatch
         self.missing_verdict = missing_verdict
+        self.uncited = uncited
 
     async def generate(self, *, node, schema, instructions, payload, validation_context=None):
         self.calls[node] += 1
@@ -58,6 +59,8 @@ class FakeModel:
                     "paragraphs": [{"id": "body", "text": quote, "source_ids": [source_id]}],
                 },
             }
+            if self.uncited:
+                value["claims"].append({"id": "uncited", "section": "snapshot", "text": "An unsupported assertion", "source_ids": []})
         else:
             value = {"verdicts": [
                 {"unit_id": unit["id"], "supported": not self.unsupported or unit["id"] == "subject",
@@ -97,6 +100,16 @@ async def test_full_graph_and_progress(settings, caplog):
     assert {event.stage.value for event in events} == {"parsing", "collecting", "analyzing", "matching", "writing", "verifying"}
     assert "node=writer" in caplog.text
     assert "Fixture Co" not in caplog.text
+
+
+async def test_writer_discards_uncited_claim_before_verification(settings):
+    model = FakeModel(uncited=True)
+    result = await ResearchWorkflow(settings, model, FakeWeb()).run(request(), SELLER)
+    assert result.status == "completed"
+    assert [claim.id for claim in result.result.claims] == ["fact"]
+    assert result.result.limited_data
+    assert "1 uncited brief claim was removed before verification." in result.result.evidence_limitations
+    assert result.result.verification.checked_units == 3
 
 
 @pytest.mark.parametrize("missing", [False, True])

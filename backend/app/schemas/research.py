@@ -165,6 +165,12 @@ class Claim(CitedText):
     section: Literal["snapshot", "trigger", "need", "role"]
 
 
+class DraftClaim(Claim):
+    # Groq's strict-schema subset cannot enforce minItems. Accept an empty list
+    # at the model boundary so the Writer can discard the uncited claim safely.
+    source_ids: list[Identifier] = Field(default_factory=list, max_length=10)
+
+
 class EmailSegment(Schema):
     id: Identifier
     text: Text
@@ -196,7 +202,7 @@ class Draft(Schema):
 
 
 class DraftOutput(Draft):
-    claims: list[Claim] = Field(max_length=12)
+    claims: list[DraftClaim] = Field(max_length=12)
     email: EmailDraftOutput
 
 

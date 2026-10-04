@@ -45,6 +45,8 @@ invent seller capabilities or treat inferred needs as established facts.
 WRITER = GROUNDING + """Write a concise brief with at most 12 claims and an
 outreach email with at most 4 short paragraphs. Each brief
 claim belongs to snapshot, trigger, need or role and cites supplied source IDs.
+If a claim has no supporting source ID, omit the claim entirely; never return
+an empty source_ids list for a brief claim.
 Use qualified language for hypotheses and role suggestions. No personal names.
 Give EVERY brief claim, the email subject, and EACH email paragraph a unique ID.
 Email paragraphs containing facts about the prospect MUST cite source IDs;

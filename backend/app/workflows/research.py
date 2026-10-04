@@ -192,7 +192,7 @@ class ResearchWorkflow:
         return updated(state, matches=matches)
 
     async def _write(self, state: WorkflowState) -> WorkflowState:
-        draft = await self._generate(
+        output = await self._generate(
             "writer", DraftOutput, prompts.WRITER,
             {
                 **self._evidence_payload(state), "seller": state.seller.model_dump(),
@@ -204,13 +204,22 @@ class ResearchWorkflow:
                 "email_tone": state.email_tone,
             }, state,
         )
+        uncited_count = sum(not claim.source_ids for claim in output.claims)
+        notes = list(state.limitations)
+        if uncited_count:
+            notes.append(f"{uncited_count} uncited brief claim{'s were' if uncited_count != 1 else ' was'} removed before verification.")
+        draft = Draft.model_validate({
+            **output.model_dump(),
+            "claims": [claim.model_dump() for claim in output.claims if claim.source_ids],
+        }, context={"source_ids": {source.id for source in state.sources}})
         if state.email_tone is not None and state.result is not None:
             # Only email units are regenerated/reverified; saved claims stay intact.
             draft = Draft.model_validate({
                 **draft.model_dump(),
                 "claims": [],
             })
-        return updated(state, draft=draft)
+        return updated(state, draft=draft, limitations=notes,
+                       limited_data=state.limited_data or uncited_count > 0)
 
     async def _verify(self, state: WorkflowState) -> WorkflowState:
         if state.draft is None:
